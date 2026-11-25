@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Jua, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 
-// TODO(brand): replace with the Korean font chosen by the brand designer
-const geistSans = Geist({
-  variable: "--font-sans",
-  subsets: ["latin"],
+// Fonts from the Figma file "잇츠미 디자인": Noto Sans KR for UI text, Jua for the brand voice.
+// Korean glyphs come in many unicode-range files, so preloading is off.
+const notoSansKr = Noto_Sans_KR({
+  variable: "--font-noto-sans-kr",
+  weight: ["400", "500", "700"],
+  preload: false,
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const jua = Jua({
+  variable: "--font-jua",
+  weight: "400",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -20,10 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="ko" className={`${notoSansKr.variable} ${jua.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

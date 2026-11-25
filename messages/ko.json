@@ -5,14 +5,60 @@
   },
   "public": {
     "home": {
-      "title": "물건을 잃어버리셨나요?",
-      "description": "시설에 있는 QR 코드를 찍으면 앱 설치 없이 분실 신고를 할 수 있어요."
+      "title": "어디에서 물건을 잃어버리셨나요?",
+      "description": "방문했던 곳을 검색해 주세요.",
+      "searchLabel": "시설 검색",
+      "placeholder": "시설 이름이나 지역 (예: 평창 스키장, 노원구)",
+      "typeFilterLabel": "시설 종류",
+      "all": "전체",
+      "recent": "최근 본 시설",
+      "byRegion": "지역별 참여 시설",
+      "resultCount": "{n}곳",
+      "loading": "시설을 찾고 있어요",
+      "noResult": "찾는 곳이 아직 잇츠미를 쓰지 않아요. 시설에 직접 문의하거나 경찰청 LOST112에서 찾아보세요.",
+      "lost112Label": "www.lost112.go.kr",
+      "lost112Url": "https://www.lost112.go.kr",
+      "error": "시설 목록을 불러오지 못했어요. 다시 시도해 주세요.",
+      "retry": "다시 시도",
+      "footer": "잇츠미를 쓰는 시설의 습득물만 찾을 수 있어요."
     }
   },
   "admin": {
+    "brand": "잇츠미",
     "home": {
-      "title": "잇츠미 관리자",
+      "title": "대시보드",
       "description": "습득물 등록과 관리 화면은 준비 중이에요."
-    }
+    },
+    "login": {
+      "title": "잇츠미 관리자",
+      "email": "이메일",
+      "password": "비밀번호",
+      "submit": "로그인",
+      "errorInvalid": "이메일 또는 비밀번호가 맞지 않아요.",
+      "errorRetry": "잠시 후 다시 시도해 주세요.",
+      "errorNoFacility": "이 계정에 연결된 시설이 없어요. 잇츠미 담당자에게 문의해 주세요."
+    },
+    "nav": {
+      "label": "관리자 메뉴",
+      "dashboard": "대시보드",
+      "items": "습득물",
+      "claims": "확인 요청",
+      "reports": "분실 신고",
+      "settings": "설정",
+      "pendingClaims": "대기 중인 확인 요청"
+    },
+    "header": {
+      "newItem": "습득물 등록",
+      "logout": "로그아웃"
+    },
+    "loading": "불러오는 중이에요"
+  },
+  "facilityTypes": {
+    "ski_resort": "스키장",
+    "hotel": "숙박·리조트",
+    "school": "대학교",
+    "festival": "축제·행사",
+    "cafe": "카페·식당",
+    "other": "기타"
   }
 }
