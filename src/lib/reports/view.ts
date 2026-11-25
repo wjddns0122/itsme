@@ -1,12 +1,14 @@
 import { z } from "zod";
 import { DEFAULT_MATCH_CONFIG } from "@/lib/matching/config";
+import { facilityIdOfPath } from "@/lib/storage-paths";
 import type { Database } from "@/lib/supabase/types";
 import { categoryLabel } from "@/lib/validation/constants";
 
 // P-04 신고 현황: everything a person who lost something may see, built only from the
-// allowlist in docs/04-architecture.md §9-2. Never add private_features, photo paths,
+// allowlist in docs/04-architecture.md §9-2. Never add private_features, photo_paths,
 // scores, coverage numbers, contact_key, contact details, ai_verdict or review_note here.
-// The one photo allowed is a short-lived signed URL of a non-sensitive item's first photo (ADR-030).
+// The one photo allowed is a short-lived signed URL of the first photo of an item that
+// passes isPhotoPublic (ADR-030). The URL itself contains the object path.
 
 type ReportStatus = Database["public"]["Enums"]["report_status"];
 type CandidateStatus = Database["public"]["Enums"]["candidate_status"];
@@ -47,11 +49,33 @@ export type CandidateRow = {
     found_area: string | null;
     is_sensitive: boolean;
     photo_paths: string[];
+    facility_id: string;
+    ai_status: AiStatus;
+    review_needed: boolean;
   } | null;
 };
 
 /** Signed URLs keyed by storage path, made on the server (lib/storage signPhotoUrls). */
 export type PhotoUrls = ReadonlyMap<string, string>;
+
+/** Categories whose photos often show names, faces or numbers: never shown, whatever the flag says (ADR-030). */
+const PHOTO_PRIVATE_CATEGORY_PREFIXES = ["wallet_card.", "document."] as const;
+
+type PhotoGate = { category: string; is_sensitive: boolean; ai_status: AiStatus; review_needed: boolean };
+
+/**
+ * Whether the person may see this item's first photo (ADR-030): not sensitive, not a wallet,
+ * card or document, and checked by the AI without a "needs review" flag (the sensitive-item
+ * detection only runs there). A-06 uses the same rule to warn the admin.
+ */
+export function isPhotoPublic(item: PhotoGate): boolean {
+  return (
+    !item.is_sensitive &&
+    !PHOTO_PRIVATE_CATEGORY_PREFIXES.some((p) => item.category.startsWith(p)) &&
+    item.ai_status === "done" &&
+    !item.review_needed
+  );
+}
 
 export type FacilityPickupRow = {
   name: string;
@@ -126,9 +150,17 @@ function shownRows(candidates: readonly CandidateRow[]): CandidateRow[] {
     .slice(0, MAX_VISIBLE_CANDIDATES);
 }
 
-/** Storage paths to sign for the page: the first photo of each shown, non-sensitive candidate. */
-export function candidatePhotoPaths(candidates: readonly CandidateRow[]): string[] {
-  return shownRows(candidates).flatMap((c) => (c.item && !c.item.is_sensitive && c.item.photo_paths[0] ? [c.item.photo_paths[0]] : []));
+/**
+ * Storage paths to sign for the page: the first photo of each shown candidate whose item passes
+ * isPhotoPublic. The service role signs any path, so both the item and the path's folder must
+ * belong to the report's facility (ADR-030).
+ */
+export function candidatePhotoPaths(candidates: readonly CandidateRow[], facilityId: string): string[] {
+  return shownRows(candidates).flatMap((c) => {
+    const path = c.item?.photo_paths[0];
+    const ok = c.item && path && isPhotoPublic(c.item) && c.item.facility_id === facilityId && facilityIdOfPath(path) === facilityId;
+    return ok ? [path] : [];
+  });
 }
 
 export function toPublicCandidate(row: CandidateRow, photoUrls: PhotoUrls = new Map()): PublicCandidate | null {
@@ -146,7 +178,7 @@ export function toPublicCandidate(row: CandidateRow, photoUrls: PhotoUrls = new 
       summary: sensitive ? null : row.item.public_summary,
       foundDate: sensitive ? null : foundDay(row.item.found_at),
       foundArea: sensitive ? null : row.item.found_area,
-      photoUrl: sensitive || !firstPhoto ? null : (photoUrls.get(firstPhoto) ?? null),
+      photoUrl: firstPhoto && isPhotoPublic(row.item) ? (photoUrls.get(firstPhoto) ?? null) : null,
     },
     pickupMessage: row.status === "approved" ? row.pickup_message : null,
     proofRequest: row.status === "needs_proof" ? row.proof_request : null,

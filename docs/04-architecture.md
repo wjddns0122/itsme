@@ -474,7 +474,7 @@ create policy inq_all      on inquiries        for all to authenticated
 | `claim-photos` | 비공개 | `{facility_id}/{candidate_id}/{uuid}.jpg` | 서버 (service role) | 관리자: 10분 만료 서명 URL |
 | `report-photos` | 비공개 | `{facility_id}/{report_id}/{uuid}.jpg` | 서버 (service role) | 관리자: 10분 만료 서명 URL. 종료 30일 후 삭제 |
 
-Storage 정책: 경로 첫 폴더(`(storage.foldername(name))[1]`)가 내 시설인 경우만 허용한다 (`private.is_facility_folder_member(name)`, 문자열로 비교해서 형식이 틀린 경로는 거부). `found-items`는 관리자가 읽기·올리기·지우기, `claim-photos`·`report-photos`는 관리자 읽기만 (쓰기는 서버 service role). 분실자에게는 민감 물품이 아닌 후보 습득물의 첫 사진 1장만, 서버(service role)가 만든 10분 서명 URL로 내려보낸다 (ADR-030). `claim-photos`·`report-photos`와 나머지 습득물 사진은 내려보내지 않는다. 실제 SQL: `supabase/migrations/20261125070430_storage_buckets.sql`, 경로 함수: `src/lib/storage-paths.ts`.
+Storage 정책: 경로 첫 폴더(`(storage.foldername(name))[1]`)가 내 시설인 경우만 허용한다 (`private.is_facility_folder_member(name)`, 문자열로 비교해서 형식이 틀린 경로는 거부). `found-items`는 관리자가 읽기·올리기·지우기, `claim-photos`·`report-photos`는 관리자 읽기만 (쓰기는 서버 service role). 분실자에게는 `isPhotoPublic`을 통과한 후보 습득물의 첫 사진 1장만, 서버(service role)가 만든 10분 서명 URL로 내려보낸다 (ADR-030). service role은 어떤 경로든 서명하므로 습득물과 경로가 모두 신고한 시설 것일 때만 서명한다. `claim-photos`·`report-photos`와 나머지 습득물 사진은 내려보내지 않는다. 마이그레이션 파일의 "never get a photo URL" 주석은 ADR-030 이전 내용이다. 실제 SQL: `supabase/migrations/20261125070430_storage_buckets.sql`, 경로 함수: `src/lib/storage-paths.ts`.
 
 ## 6. Server Actions
 
@@ -593,7 +593,7 @@ return { ok: true, data: { token: report.access_token } };
 |---|---|
 | `lost_reports` | `description`, `user_category`(본인이 고른 분류), `lost_from`, `lost_to`, `lost_area`, `lost_time_of_day`, `is_rental`, `status`, `created_at`, `ai_status` |
 | `match_candidates` | `id`, `status`, 유사도 라벨(높음/보통 — 점수 숫자 아님), 정보 부족 표시(충족도 숫자 아님), `pickup_message`(승인 시), `proof_request`(추가 증빙 요청 시). **`ai_verdict`, `review_note`는 절대 안 됨** |
-| `found_items` | `category`, `subcategory`, `public_summary`, 습득 날짜(일 단위), `found_area`, 대표 사진 1장(`photo_paths[0]`을 서버가 서명한 10분 URL. 경로 자체는 안 됨, ADR-030). **민감 물품이면 `category`만** |
+| `found_items` | `category`, `subcategory`, `public_summary`, 습득 날짜(일 단위), `found_area`, 대표 사진 1장(`photo_paths[0]`을 서버가 서명한 10분 URL. `photo_paths` 필드는 안 됨. URL 안에는 객체 경로가 들어 있다. 민감 물품·지갑·카드·서류·AI 확인 전·검토 필요 물건은 없음, ADR-030). **민감 물품이면 `category`만** |
 | `facilities` | `slug`, `name`, `region`, `type`, `intro`, `homepage_url`, `contact_phone`, `hours`, `desk_location`, `pickup_guide`, `areas`(신고 양식 구역 칩). `is_listed = false` 시설은 검색 결과에 넣지 않는다 |
 
 이 목록 밖의 필드를 분실자 응답에 넣는 코드는 리뷰에서 막는다. 특히 `contact_key`와 같은 연락처의 다른 신고가 있는지 여부는 절대 넣지 않는다 (F9 개인정보 규칙). `getReportView`에 이 목록을 그대로 코드로 둔다.

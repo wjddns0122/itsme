@@ -49,6 +49,7 @@ async function Detail({ params }: Pick<PageProps<"/admin/claims/[id]">, "params"
         {open && c.claimedAt ? <span className="text-desc text-ink-muted">{t.waitSuffix.replace("{wait}", formatWait(c.claimedAt, new Date()))}</span> : null}
       </div>
 
+      {c.item.photoShownToReporter ? <Warning text={t.warnPhotoShown} /> : null}
       {c.warnings.otherRequests > 0 ? <Warning text={t.warnOtherRequests.replace("{n}", String(c.warnings.otherRequests))} /> : null}
       {c.warnings.contactRecentItems >= CONTACT_CLAIM_WARNING.items ? <Warning text={t.warnContact.replace("{n}", String(c.warnings.contactRecentItems))} strong /> : null}
       {c.status === "approved" ? (
