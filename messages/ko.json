@@ -133,6 +133,7 @@
         "medium": "유사도 보통"
       },
       "foundOn": "습득 {date}",
+      "photoAlt": "{item} 사진",
       "claim": "내 물건 같아요",
       "dismiss": "아니에요",
       "claimPending": "관리자가 확인하고 있어요. 보통 하루 안에 연락드려요.",

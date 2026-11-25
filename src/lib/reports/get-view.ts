@@ -1,7 +1,9 @@
 import "server-only";
 import { cache } from "react";
+import { signPhotoUrls } from "@/lib/storage";
+import { BUCKETS } from "@/lib/storage-paths";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ReportTokenSchema, VISIBLE_CANDIDATE_STATUSES, toReportView, type ReportView } from "./view";
+import { ReportTokenSchema, VISIBLE_CANDIDATE_STATUSES, candidatePhotoPaths, toReportView, type ReportView } from "./view";
 
 export type ReportViewResult = { status: "ok"; view: ReportView } | { status: "not_found" } | { status: "error" };
 
@@ -26,13 +28,19 @@ export const getReportView = cache(async (token: string): Promise<ReportViewResu
 
   const { data: candidates, error: candidateError } = await supabase
     .from("match_candidates")
-    .select("id, status, score, coverage, pickup_message, proof_request, item:found_items(category, subcategory, public_summary, found_at, found_area, is_sensitive)")
+    .select(
+      "id, status, score, coverage, pickup_message, proof_request, item:found_items(category, subcategory, public_summary, found_at, found_area, is_sensitive, photo_paths)",
+    )
     .eq("lost_report_id", report.id)
     .in("status", [...VISIBLE_CANDIDATE_STATUSES]);
   if (candidateError) return failed("candidates", candidateError.code);
 
+  // Only the first photo of shown, non-sensitive candidates, as 10-minute signed URLs (ADR-030).
+  // Signing failures leave the map empty and the card falls back to the category icon.
+  const photoUrls = await signPhotoUrls(supabase, BUCKETS.foundItems, candidatePhotoPaths(candidates));
+
   // toReportView copies only the allowlisted fields out of these rows.
-  return { status: "ok", view: toReportView(report, report.facility, candidates) };
+  return { status: "ok", view: toReportView(report, report.facility, candidates, photoUrls) };
 });
 
 function failed(step: string, code: string): ReportViewResult {

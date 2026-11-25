@@ -178,9 +178,16 @@ function CandidateCard({ candidate, children }: { candidate: PublicCandidate; ch
   return (
     <article className="flex flex-col gap-2.5 rounded-ui-md border border-line bg-surface p-3.5">
       <div className="flex items-start gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-ui-sm bg-blush">
-          <Icon name={categoryIcon(item.categoryCode)} size={24} />
-        </span>
+        {item.photoUrl ? (
+          // ADR-030: the first photo of a non-sensitive item, through a short-lived signed URL.
+          <span className="relative size-16 shrink-0 overflow-hidden rounded-ui-sm bg-blush">
+            <Image src={item.photoUrl} alt={t.photoAlt.replace("{item}", item.summary ?? item.category)} fill unoptimized className="object-cover" />
+          </span>
+        ) : (
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-ui-sm bg-blush">
+            <Icon name={categoryIcon(item.categoryCode)} size={24} />
+          </span>
+        )}
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <p className="text-body leading-[1.5] font-bold text-ink">{item.summary ?? item.category}</p>
           {meta ? <p className="text-caption font-medium text-ink-muted">{meta}</p> : null}

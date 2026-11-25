@@ -6,6 +6,7 @@ import { categoryLabel } from "@/lib/validation/constants";
 // P-04 신고 현황: everything a person who lost something may see, built only from the
 // allowlist in docs/04-architecture.md §9-2. Never add private_features, photo paths,
 // scores, coverage numbers, contact_key, contact details, ai_verdict or review_note here.
+// The one photo allowed is a short-lived signed URL of a non-sensitive item's first photo (ADR-030).
 
 type ReportStatus = Database["public"]["Enums"]["report_status"];
 type CandidateStatus = Database["public"]["Enums"]["candidate_status"];
@@ -45,8 +46,12 @@ export type CandidateRow = {
     found_at: string;
     found_area: string | null;
     is_sensitive: boolean;
+    photo_paths: string[];
   } | null;
 };
+
+/** Signed URLs keyed by storage path, made on the server (lib/storage signPhotoUrls). */
+export type PhotoUrls = ReadonlyMap<string, string>;
 
 export type FacilityPickupRow = {
   name: string;
@@ -72,6 +77,8 @@ export type PublicCandidate = {
     summary: string | null;
     foundDate: string | null;
     foundArea: string | null;
+    /** Signed URL of the first photo, never the path. Null for sensitive items or when signing failed (ADR-030). */
+    photoUrl: string | null;
   };
   pickupMessage: string | null;
   proofRequest: string | null;
@@ -111,9 +118,23 @@ export function foundDay(foundAt: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(foundAt));
 }
 
-export function toPublicCandidate(row: CandidateRow): PublicCandidate | null {
+/** The rows the page shows: visible statuses, best score first, at most five. */
+function shownRows(candidates: readonly CandidateRow[]): CandidateRow[] {
+  return [...candidates]
+    .sort((a, b) => b.score - a.score)
+    .filter((c) => c.item !== null && isVisible(c.status))
+    .slice(0, MAX_VISIBLE_CANDIDATES);
+}
+
+/** Storage paths to sign for the page: the first photo of each shown, non-sensitive candidate. */
+export function candidatePhotoPaths(candidates: readonly CandidateRow[]): string[] {
+  return shownRows(candidates).flatMap((c) => (c.item && !c.item.is_sensitive && c.item.photo_paths[0] ? [c.item.photo_paths[0]] : []));
+}
+
+export function toPublicCandidate(row: CandidateRow, photoUrls: PhotoUrls = new Map()): PublicCandidate | null {
   if (!row.item || !isVisible(row.status)) return null;
   const sensitive = row.item.is_sensitive;
+  const firstPhoto = row.item.photo_paths[0];
   return {
     id: row.id,
     status: row.status,
@@ -125,18 +146,22 @@ export function toPublicCandidate(row: CandidateRow): PublicCandidate | null {
       summary: sensitive ? null : row.item.public_summary,
       foundDate: sensitive ? null : foundDay(row.item.found_at),
       foundArea: sensitive ? null : row.item.found_area,
+      photoUrl: sensitive || !firstPhoto ? null : (photoUrls.get(firstPhoto) ?? null),
     },
     pickupMessage: row.status === "approved" ? row.pickup_message : null,
     proofRequest: row.status === "needs_proof" ? row.proof_request : null,
   };
 }
 
-export function toReportView(report: ReportRow, facility: FacilityPickupRow, candidates: readonly CandidateRow[]): ReportView {
-  const visible = [...candidates]
-    .sort((a, b) => b.score - a.score)
-    .map(toPublicCandidate)
-    .filter((c): c is PublicCandidate => c !== null)
-    .slice(0, MAX_VISIBLE_CANDIDATES);
+export function toReportView(
+  report: ReportRow,
+  facility: FacilityPickupRow,
+  candidates: readonly CandidateRow[],
+  photoUrls: PhotoUrls = new Map(),
+): ReportView {
+  const visible = shownRows(candidates)
+    .map((c) => toPublicCandidate(c, photoUrls))
+    .filter((c): c is PublicCandidate => c !== null);
 
   return {
     report: {
