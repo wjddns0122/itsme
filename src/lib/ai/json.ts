@@ -19,7 +19,10 @@ export type JsonClient = {
 
 export type JsonError = "request_failed" | "not_finished" | "empty_response" | "invalid_json" | "schema_mismatch";
 
-export type JsonResult<T> = { ok: true; data: T; attempts: number } | { ok: false; error: JsonError; attempts: number };
+/** `usage` is the token count from the successful attempt (for ai_raw); never prompts. */
+export type JsonResult<T> =
+  | { ok: true; data: T; attempts: number; usage: unknown }
+  | { ok: false; error: JsonError; attempts: number };
 
 export type GenerateJsonOptions<S extends z.ZodType> = {
   client: JsonClient;
@@ -87,7 +90,7 @@ export async function generateJson<S extends z.ZodType>(opts: GenerateJsonOption
         usage: response.usageMetadata,
         ...(result.ok ? {} : { error: result.error }),
       });
-      if (result.ok) return { ok: true, data: result.data, attempts: attempt };
+      if (result.ok) return { ok: true, data: result.data, attempts: attempt, usage: response.usageMetadata ?? null };
       lastError = result.error;
     } catch {
       lastError = "request_failed";

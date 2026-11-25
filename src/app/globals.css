@@ -25,6 +25,9 @@
   --color-warn-bg: #fff1cf; /* color/feedback/warn-bg */
   --color-ok: #1e6e44; /* color/feedback/ok */
   --color-info: #2b57b5; /* color/feedback/info (links) */
+  --color-info-bg: #e9f0fb; /* color/feedback/info-bg */
+  --color-ai-fill: #eef3fd; /* color/state/ai-fill: fields the AI filled */
+  --color-track: #eadbd6; /* switch track when off */
 
   --radius-ui-sm: 14px; /* radius/sm */
   --radius-ui-md: 18px; /* radius/md */

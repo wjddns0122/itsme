@@ -66,7 +66,12 @@ describe("generateJson", () => {
     const { client, calls } = fakeClient(reply('{"category":"electronics.earphones","colors":["검정"]}'));
     const result = await run(client);
 
-    expect(result).toEqual({ ok: true, data: { category: "electronics.earphones", colors: ["검정"] }, attempts: 1 });
+    expect(result).toEqual({
+      ok: true,
+      data: { category: "electronics.earphones", colors: ["검정"] },
+      attempts: 1,
+      usage: { promptTokenCount: 10, candidatesTokenCount: 5 },
+    });
     const config = calls[0].config ?? {};
     expect(config.responseMimeType).toBe("application/json");
     expect(config.responseJsonSchema).toMatchObject({ type: "object" });
@@ -77,7 +82,7 @@ describe("generateJson", () => {
 
   it("retries once and succeeds on the second answer", async () => {
     const { client } = fakeClient(reply("oops"), reply('{"category":"x","colors":[]}'));
-    expect(await run(client)).toEqual({ ok: true, data: { category: "x", colors: [] }, attempts: 2 });
+    expect(await run(client)).toMatchObject({ ok: true, data: { category: "x", colors: [] }, attempts: 2 });
   });
 
   it("gives up after one retry with the last error", async () => {

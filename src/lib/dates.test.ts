@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatMonthDay, isIsoDate, seoulToday } from "./dates";
+import { addDays, addDaysToInstant, formatMonthDay, isIsoDate, seoulLocalToIso, seoulNowLocalInput, seoulToday } from "./dates";
 
 describe("seoulToday", () => {
   it("한국 시간 기준 날짜를 준다 (UTC 15시 = 서울 다음 날 0시)", () => {
@@ -26,5 +26,20 @@ describe("isIsoDate", () => {
 describe("formatMonthDay", () => {
   it("월 일로 보여준다", () => {
     expect(formatMonthDay("2026-11-04")).toBe("11월 4일");
+  });
+});
+
+describe("seoul datetime-local", () => {
+  it("지금 시각을 서울 기준 입력값으로", () => {
+    expect(seoulNowLocalInput(new Date("2026-11-25T05:32:10Z"))).toBe("2026-11-25T14:32");
+  });
+
+  it("입력값을 서울 시각으로 읽어 ISO로 바꾼다", () => {
+    expect(seoulLocalToIso("2026-11-25T14:32")).toBe("2026-11-25T05:32:00.000Z");
+    expect(seoulLocalToIso("2026-11-25 14:32")).toBeNull();
+  });
+
+  it("며칠 뒤 시각", () => {
+    expect(addDaysToInstant("2026-11-25T05:32:00.000Z", 30)).toBe("2026-12-25T05:32:00.000Z");
   });
 });

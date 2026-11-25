@@ -1,0 +1,29 @@
+import { z } from "zod";
+import { CATEGORY_CODES, COLORS } from "./constants";
+
+// AI output schemas: docs/05-ai-matching.md §2-3. The schema sent to Gemini stays simple;
+// counts and ranges are enforced in code after parsing (lib/ai/postprocess.ts).
+
+export const ItemDescriptorSchema = z.object({
+  category: z.enum(CATEGORY_CODES),
+  subcategory: z.string().nullable(),
+  colors: z.array(z.enum(COLORS)),
+  brand: z.string().nullable(),
+  material: z.string().nullable(),
+  features: z.array(z.string()),
+  confidence: z.number(),
+});
+
+export const FoundItemExtractionSchema = ItemDescriptorSchema.extend({
+  public_summary: z.string(),
+  private_features: z.array(z.string()),
+  is_sensitive: z.boolean(),
+});
+
+export const LostReportNormalizationSchema = ItemDescriptorSchema.extend({
+  language: z.string(),
+});
+
+export type ItemDescriptor = z.infer<typeof ItemDescriptorSchema>;
+export type FoundItemExtraction = z.infer<typeof FoundItemExtractionSchema>;
+export type LostReportNormalization = z.infer<typeof LostReportNormalizationSchema>;

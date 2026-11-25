@@ -104,41 +104,41 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 
 ## E1. 습득물 등록·관리
 
-### FL-010 · 사진 촬영·축소 컴포넌트
+### FL-010 · 사진 촬영·축소 컴포넌트 ✅
 - P0 · 1h · 의존 FL-001
 - 범위: `src/components/photo-capture.tsx`
 - 수용 기준
-  - [ ] 모바일에서 카메라 바로 열기 (`capture="environment"`) + 앨범 선택
-  - [ ] 최대 3장, 썸네일, 삭제
-  - [ ] 긴 변 1280px JPEG(품질 0.8)로 축소 후 `File[]` 반환
-  - [ ] 이미지가 아닌 파일 거부
+  - [x] 모바일에서 카메라 바로 열기 (`capture="environment"`) + 앨범 선택
+  - [x] 최대 3장, 썸네일, 삭제
+  - [x] 긴 변 1280px JPEG(품질 0.8)로 축소 후 `File[]` 반환
+  - [x] 이미지가 아닌 파일 거부
 - 참고: `03-screens.md` A-03
 
-### FL-011 · 사진 분석 (AI 추출) ★
+### FL-011 · 사진 분석 (AI 추출) ★ 🟡 코드 완료, 스파이크(실제 사진 10장) 남음
 - P0 · 2.5h · 의존 FL-004, FL-005
 - 범위: `src/lib/ai/prompts.ts`, `src/lib/ai/extract.ts`, `src/lib/validation/ai.ts`, `src/lib/validation/constants.ts`, `src/server/actions/items.ts`(`analyzePhoto`)
 - **Day 1 스파이크**: 실제 물건 사진 10장으로 먼저 돌려보고 결과를 `eval/spike-day1.md`에 표로 남긴다 (분류 맞음/틀림, 지연 시간). 프롬프트 v1을 이걸로 확정.
 - 수용 기준
-  - [ ] `05-ai-matching.md` §2 분류·색상 상수, §2-3 zod 스키마
-  - [ ] §3-2 시스템 프롬프트, structured outputs로 호출
-  - [ ] §3-3 후처리 (자르기, 민감 물품 강제, 개인정보 마스킹)
-  - [ ] `analyzePhoto`: 업로드와 분석 동시 실행, AI 실패 시 `extraction: null`
-  - [ ] 후처리 단위 테스트 (마스킹, 민감 물품 강제)
-  - [ ] 스파이크 결과 파일
+  - [x] `05-ai-matching.md` §2 분류·색상 상수, §2-3 zod 스키마
+  - [x] §3-2 시스템 프롬프트, structured outputs로 호출 (`thinkingLevel: LOW`)
+  - [x] §3-3 후처리 (자르기, 민감 물품 강제, 개인정보 마스킹)
+  - [x] `analyzePhoto`: 업로드와 분석 동시 실행, AI 실패 시 `extraction: null` (키·모델 설정이 없어도 같은 길)
+  - [x] 후처리 단위 테스트 (마스킹, 민감 물품 강제)
+  - [ ] 스파이크 결과 파일 — 팀이 찍은 실제 물건 사진 10장이 필요 (무료 키에는 팀 테스트 사진만)
 - 참고: `05-ai-matching.md` §2, §3, §8, `04-architecture.md` §6-1
 
-### FL-012 · 습득물 등록 화면과 저장
+### FL-012 · 습득물 등록 화면과 저장 🟡 코드 완료, 로그인 상태 화면 확인 남음
 - P0 · 2h · 의존 FL-010, FL-011
 - 범위: `src/app/admin/items/new/`, `src/server/actions/items.ts`(`createFoundItem`)
 - 수용 기준
-  - [ ] A-03 2단계 흐름 (사진 → 확인·수정)
-  - [ ] AI가 채운 필드 옅은 배경, 수정하면 일반 배경
-  - [ ] 민감 물품 경고 배너, AI 실패 배너 + 빈 양식
-  - [ ] 10초 경과 시 "직접 입력하기" 버튼
-  - [ ] 습득 일시 기본값 지금, 보관 위치 직전 값 기본
-  - [ ] 저장: `transfer_due_at` 계산, `register_started_at` 저장, 이벤트 `registered`
-  - [ ] [저장하고 계속 등록]
-  - [ ] [민감 물품] 버튼: AI 분석 없이 분류만 골라 저장 (`createSensitiveItem`), 사진을 외부 AI로 보내지 않음
+  - [x] A-03 2단계 흐름 (사진 → 확인·수정)
+  - [x] AI가 채운 필드 옅은 배경, 수정하면 일반 배경
+  - [x] 민감 물품 경고 배너, AI 실패 배너 + 빈 양식
+  - [x] 10초 경과 시 "직접 입력하기" 버튼 (먼저 고친 칸은 AI 결과가 와도 덮어쓰지 않음)
+  - [x] 습득 일시 기본값 지금, 보관 위치 직전 값 기본 (이 기기, 시설별)
+  - [x] 저장: `transfer_due_at` 계산, `register_started_at` 저장, 이벤트 `registered`
+  - [x] [저장하고 계속 등록]
+  - [x] [민감 물품] 버튼: AI 분석 없이 분류만 골라 저장 (`createSensitiveItem`), 사진을 외부 AI로 보내지 않음
 - 참고: `03-screens.md` A-03, `02-user-flows.md` §2
 
 ### FL-013 · 습득물 목록

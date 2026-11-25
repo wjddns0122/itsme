@@ -25,3 +25,23 @@ export function formatMonthDay(date: string): string {
   const [, m, d] = date.split("-").map(Number);
   return `${m}월 ${d}일`;
 }
+
+/** Value for <input type="datetime-local"> showing the current Seoul time: "2026-11-25T14:32". */
+export function seoulNowLocalInput(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SEOUL, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+/** A datetime-local value typed in Korea ("2026-11-25T14:32") as an ISO instant, or null if malformed. */
+export function seoulLocalToIso(value: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}:00+09:00`);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+export function addDaysToInstant(iso: string, days: number): string {
+  return new Date(new Date(iso).getTime() + days * 86_400_000).toISOString();
+}

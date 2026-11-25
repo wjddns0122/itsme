@@ -181,7 +181,56 @@
       "newItem": "습득물 등록",
       "logout": "로그아웃"
     },
-    "loading": "불러오는 중이에요"
+    "loading": "불러오는 중이에요",
+    "register": {
+      "title": "습득물 등록",
+      "sensitiveButton": "민감 물품",
+      "photos": "사진",
+      "maxPhotos": "최대 3장",
+      "takePhoto": "사진 찍기",
+      "pickAlbum": "앨범에서 선택",
+      "photoAlt": "습득물 사진 {n}",
+      "removePhoto": "사진 {n} 지우기",
+      "notImage": "사진 파일만 올릴 수 있어요.",
+      "tooMany": "사진은 3장까지 올릴 수 있어요.",
+      "analyzing": "AI가 물건을 살펴보고 있어요…",
+      "manualEntry": "직접 입력하기",
+      "aiFailed": "AI 분석이 안 됐어요. 직접 입력해 주세요.",
+      "sensitiveDetected": "신분증·카드로 보여요. 사진은 공개되지 않아요.",
+      "photoFirst": "사진을 먼저 올려 주세요. 사진이 없으면 [직접 입력하기]로 시작해요.",
+      "category": "분류",
+      "categoryPlaceholder": "분류를 골라 주세요",
+      "subcategory": "세부 종류",
+      "color": "색상",
+      "brand": "브랜드",
+      "guessed": "추정",
+      "sensitive": "민감 물품",
+      "publicSummary": "공개 설명",
+      "visibleToOwner": "분실자에게 보여요",
+      "privateFeatures": "비공개 특징",
+      "privateNote": "관리자만 봐요. 주인 확인에 써요",
+      "privateHint": "일련번호, 각인, 안에 든 물건, 흠집 위치처럼 주인만 알 만한 것을 적어주세요.",
+      "foundAt": "습득 일시",
+      "foundArea": "습득 구역",
+      "areaUnknown": "모름",
+      "storageLocation": "보관 위치",
+      "storagePlaceholder": "예) 보관함 A-03",
+      "save": "저장",
+      "saveAndContinue": "저장하고 계속 등록",
+      "saved": "등록했어요. 다음 물건 사진을 올려 주세요.",
+      "aiFilledLabel": "AI가 채운 값",
+      "errors": {
+        "category_required": "분류를 골라 주세요.",
+        "summary_required": "분실자에게 보여줄 공개 설명을 한 줄 적어 주세요.",
+        "internal": "저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        "upload_failed": "사진을 올리지 못했어요. 다시 시도해 주세요."
+      },
+      "sensitiveMode": {
+        "title": "민감 물품 등록",
+        "notice": "이 사진은 외부 AI로 보내지 않아요.",
+        "back": "일반 등록으로"
+      }
+    }
   },
   "facilityTypes": {
     "ski_resort": "스키장",
