@@ -62,6 +62,7 @@ async function ReportStatus({ params, searchParams }: Pick<PageProps<"/r/[token]
     <div className="flex flex-col gap-3.5">
       {isNew ? <NewReportBanner rental={view.report.isRental} /> : null}
       <ReportSummary view={view} />
+      {view.notConfirmed ? <p role="status" className="rounded-ui-sm bg-neutral-bg px-3.5 py-3 text-desc text-neutral-ink">{t.notConfirmed}</p> : null}
 
       {phase === "analyzing" ? (
         <>

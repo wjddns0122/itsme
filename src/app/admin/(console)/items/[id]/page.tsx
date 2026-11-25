@@ -1,7 +1,7 @@
 // A-05 습득물 상세
 import Link from "next/link";
 import { Suspense } from "react";
-import { ItemInfoCard, ItemStatusActions, PhotoViewer, RetryAnalysis } from "@/components/admin/items/item-detail-client";
+import { ItemInfoCard, ItemStatusActions, PhotoViewer, ReturnedToast, RetryAnalysis } from "@/components/admin/items/item-detail-client";
 import type { RegisterValues } from "@/components/admin/register/register-state";
 import { CandidateStatusBadge, CountBadge, ItemStatusBadge, SimilarityBadge } from "@/components/admin/status-badge";
 import { getAdminContext } from "@/lib/auth/admin";
@@ -14,22 +14,22 @@ import ko from "../../../../../../messages/ko.json";
 
 const t = ko.admin.item;
 
-export default function ItemDetailPage({ params }: PageProps<"/admin/items/[id]">) {
+export default function ItemDetailPage({ params, searchParams }: PageProps<"/admin/items/[id]">) {
   return (
     <main className="flex flex-col gap-5 px-4 pt-6 pb-8 md:px-6">
       <Link href="/admin/items" className="flex min-h-11 items-center gap-1 self-start text-desc text-ink-muted">
         <span aria-hidden>‹</span> {t.back}
       </Link>
       <Suspense fallback={<span role="status" className="text-desc text-ink-muted">{ko.admin.loading}</span>}>
-        <Detail params={params} />
+        <Detail params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function Detail({ params }: Pick<PageProps<"/admin/items/[id]">, "params">) {
+async function Detail({ params, searchParams }: Pick<PageProps<"/admin/items/[id]">, "params" | "searchParams">) {
   const { facility } = await getAdminContext();
-  const { id } = await params;
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const result = await getItemDetail(id);
   if (result.status !== "ok") {
     return <p role="alert" className="text-body font-bold text-ink">{result.status === "not_found" ? t.notFound : t.failed}</p>;
@@ -43,12 +43,24 @@ async function Detail({ params }: Pick<PageProps<"/admin/items/[id]">, "params">
 
   return (
     <>
+      {query.returned === "1" && item.status === "returned" ? <ReturnedToast text={ko.admin.return.done} /> : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <h1 className="text-page font-bold tracking-[-0.01em] text-ink">{item.public_summary}</h1>
           <ItemStatusBadge status={item.status} />
         </div>
-        {open ? <ItemStatusActions id={item.id} /> : null}
+        {open ? (
+          <ItemStatusActions
+            id={item.id}
+            category={item.category}
+            subtitle={[item.public_summary, item.storage_location].filter(Boolean).join(" · ")}
+            returnOptions={detail.candidates.flatMap((c) =>
+              c.status === "approved" && c.report
+                ? [{ candidateId: c.id, name: c.report.contactName, date: formatMonthDay(foundDay(c.report.createdAt)), firstLine: c.report.description.split("\n")[0] }]
+                : [],
+            )}
+          />
+        ) : null}
       </div>
 
       {item.ai_status === "failed" && !item.is_sensitive && item.photo_paths.length > 0 ? <RetryAnalysis id={item.id} /> : null}

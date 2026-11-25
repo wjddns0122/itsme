@@ -61,3 +61,31 @@ export const ClaimAnswersSchema = z
   .refine((a) => Object.values(a).some((v) => v.length > 0), { message: "answer_required" });
 
 export const ProofReplySchema = z.string().trim().min(1).max(CLAIM_LIMITS.proofReply);
+
+/** A-06 decisions (docs/02-user-flows.md §6). Messages may reach the person; notes never do. */
+export const ReviewClaimSchema = z.discriminatedUnion("action", [
+  z.object({ id: z.uuid(), action: z.literal("approve"), message: z.string().trim().max(500), note: z.string().trim().max(300).nullable() }),
+  z.object({ id: z.uuid(), action: z.literal("request_proof"), message: z.string().trim().min(1).max(300), note: z.string().trim().max(300).nullable() }),
+  z.object({ id: z.uuid(), action: z.literal("hold"), message: z.null(), note: z.string().trim().min(1).max(300) }),
+  z.object({ id: z.uuid(), action: z.literal("reject"), message: z.null(), note: z.string().trim().max(300).nullable() }),
+]);
+export type ReviewClaimInput = z.input<typeof ReviewClaimSchema>;
+
+/** A-09 확인 방법 (docs/02-user-flows.md §6), stored in found_items.return_method. */
+export const RETURN_METHODS = ["id_check", "qa", "unlock", "serial", "receipt", "other"] as const;
+
+/** A-09: high-value items, wallets and IDs must be checked with one of these (docs/03 A-09). */
+export const STRICT_RETURN_METHODS = ["id_check", "unlock", "serial"] as const satisfies readonly (typeof RETURN_METHODS)[number][];
+
+export function returnMethodsFor(category: string): readonly (typeof RETURN_METHODS)[number][] {
+  return requiredProofFor(category) ? STRICT_RETURN_METHODS : RETURN_METHODS;
+}
+
+export const MarkReturnedSchema = z.object({
+  itemId: z.uuid(),
+  candidateId: z.uuid().nullable(),
+  recipient: z.string().trim().min(1).max(30),
+  method: z.enum(RETURN_METHODS),
+  note: z.string().trim().max(200).nullable(),
+});
+export type MarkReturnedInput = z.input<typeof MarkReturnedSchema>;

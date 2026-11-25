@@ -512,8 +512,7 @@ Storage 정책: 경로 첫 폴더(`(storage.foldername(name))[1]`)가 내 시설
 |---|---|---|
 | `dismissCandidate` | 분실자 | 토큰 소유 확인 후 `dismissed (user)` |
 | `submitClaim` | 분실자 | 토큰 소유 확인, 진행 중 요청 없음·시도 2회 미만 확인, 분류별 질문 답변(질문 문구와 함께)·사진 저장, 후보 `claimed`, 습득물 `claimed`, 신고 `claimed` — DB 함수 `submit_claim` 한 트랜잭션(service role 전용, 결과 코드 `ok`·`active_exists`·`limit`·`not_available`). `after()`로 AI 답변 비교 → `ai_verdict` 저장 (FL-044 ✂️) |
-| `reviewClaim` | 관리자 | DB 함수 `review_claim(candidate, action, message, note)` (security invoker, RLS). |
-| (상세) | | `approve`: 후보 `approved`, 수령 안내(필수 증빙 포함) 저장·이메일. `request_proof`: 후보 `needs_proof`, `proof_request` 저장, 분실자 이메일. `hold`: 상태 유지, 내부 메모. `reject`: 후보 `rejected`, 습득물에 다른 `claimed` 후보가 없으면 `stored`, 신고 `open` |
+| `reviewClaim` | 관리자 | DB 함수 `review_claim(candidate, action, message, note)` (security invoker, RLS). `approve`: 후보 `approved`, 수령 안내(필수 증빙 포함) 저장·이메일. `request_proof`: 후보 `needs_proof`, `proof_request` 저장, 분실자 이메일. `hold`: 상태 유지, 내부 메모. `reject`: 후보 `rejected`, 습득물에 다른 `claimed` 후보가 없으면 `stored`, 신고 `open` |
 | `submitProof` | 분실자 | 토큰 소유 확인, 후보가 `needs_proof`일 때만 답변·사진 저장 → `claimed`로 복귀 (DB 함수 `submit_proof`), AI 비교 다시 실행 (FL-044) |
 
 ### 6-4. Route Handlers

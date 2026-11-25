@@ -68,6 +68,13 @@ describe("toReportView: §9-2 허용 필드만", () => {
     expect(view.candidates[0].item).toEqual({ category: "카드·교통카드", categoryCode: "wallet_card.card", summary: null, foundDate: null, foundArea: null });
   });
 
+  it("거절된 요청은 목록에서 빼고, 사유 없이 '확인되지 않았어요'만 알린다", () => {
+    const view = toReportView(report, facility, [candidate({ status: "rejected", review_note: "특징 불일치" }), candidate({ id: "c2" })]);
+    expect(view.notConfirmed).toBe(true);
+    expect(view.candidates.every((c) => c.status !== ("rejected" as string))).toBe(true);
+    expect(JSON.stringify(view)).not.toContain("특징 불일치");
+  });
+
   it("수령 안내는 승인됐을 때만, 추가 증빙 요청은 요청 상태일 때만", () => {
     const [suggested] = toReportView(report, facility, [candidate()]).candidates;
     expect(suggested.pickupMessage).toBeNull();

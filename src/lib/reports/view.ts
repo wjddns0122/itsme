@@ -99,6 +99,8 @@ export type ReportView = {
     pickupGuide: string | null;
   };
   candidates: PublicCandidate[];
+  /** A request was rejected: show only "확인되지 않았어요", never the reason (docs/02 §5). */
+  notConfirmed: boolean;
 };
 
 const isVisible = (s: CandidateStatus): s is PublicCandidate["status"] =>
@@ -158,6 +160,7 @@ export function toReportView(report: ReportRow, facility: FacilityPickupRow, can
       pickupGuide: facility.pickup_guide,
     },
     candidates: visible,
+    notConfirmed: report.status === "open" && candidates.some((c) => c.status === "rejected"),
   };
 }
 

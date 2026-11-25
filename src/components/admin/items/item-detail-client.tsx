@@ -1,11 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ItemForm } from "@/components/admin/register/item-form";
 import type { RegisterValues } from "@/components/admin/register/register-state";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
+import { Modal } from "@/components/admin/modal";
+import { FieldError } from "@/components/public/report/controls";
+import { returnMethodsFor, type RETURN_METHODS } from "@/lib/validation/claim";
+import { useRouter } from "next/navigation";
+import { markReturned } from "@/server/actions/candidates";
 import { retryAnalysis, setFoundItemStatus, updateFoundItem } from "@/server/actions/items";
 import ko from "../../../../messages/ko.json";
 
@@ -102,8 +107,11 @@ export function ItemInfoCard({ id, rows, values, areas }: { id: string; rows: In
   );
 }
 
-/** [경찰 이관] [폐기 처리] with an inline confirmation and an optional note. */
-export function ItemStatusActions({ id }: { id: string }) {
+export type ReturnOption = { candidateId: string; name: string | null; date: string; firstLine: string };
+
+/** [반환 처리] [경찰 이관] [폐기 처리]. Transfer and disposal confirm inline with an optional note. */
+export function ItemStatusActions({ id, category, subtitle, returnOptions }: { id: string; category: string; subtitle: string; returnOptions: ReturnOption[] }) {
+  const [returning, setReturning] = useState(false);
   const [confirming, setConfirming] = useState<"transferred" | "disposed" | null>(null);
   const [note, setNote] = useState("");
   const [failed, setFailed] = useState(false);
@@ -119,7 +127,10 @@ export function ItemStatusActions({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={() => setReturning(true)} className="flex h-11 items-center rounded-ui-sm bg-brand px-4 text-button font-bold text-on-brand">
+          {t.actions.return}
+        </button>
         <button type="button" onClick={() => setConfirming("transferred")} className="flex h-11 items-center rounded-ui-sm border border-line-strong bg-surface px-4 text-button font-bold text-ink">
           {t.actions.transfer}
         </button>
@@ -145,7 +156,107 @@ export function ItemStatusActions({ id }: { id: string }) {
           </div>
         </div>
       ) : null}
+      {returning ? <ReturnDialog itemId={id} category={category} subtitle={subtitle} options={returnOptions} onClose={() => setReturning(false)} /> : null}
     </div>
+  );
+}
+
+const r = ko.admin.return;
+
+/** A-09 반환 처리 (Figma 22:2530): linked report or none, recipient (required), how it was checked, memo. */
+function ReturnDialog({ itemId, category, subtitle, options, onClose }: { itemId: string; category: string; subtitle: string; options: ReturnOption[]; onClose: () => void }) {
+  const router = useRouter();
+  const methods = returnMethodsFor(category);
+  const [candidateId, setCandidateId] = useState<string | null>(options[0]?.candidateId ?? null);
+  const [recipient, setRecipient] = useState(options[0]?.name ?? "");
+  const [method, setMethod] = useState<(typeof RETURN_METHODS)[number]>("id_check");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const choose = (option: ReturnOption | null) => {
+    setCandidateId(option?.candidateId ?? null);
+    if (option?.name && !recipient.trim()) setRecipient(option.name);
+  };
+  const submit = () =>
+    startTransition(async () => {
+      if (!recipient.trim()) {
+        setError(r.recipientRequired);
+        return;
+      }
+      const result = await markReturned({ itemId, candidateId, recipient, method, note: note.trim() || null });
+      if (!result.ok) {
+        setError(r.failed);
+        return;
+      }
+      onClose();
+      router.replace(`/admin/items/${itemId}?returned=1`);
+    });
+
+  const radio = (selected: boolean) =>
+    cn("flex w-full items-center gap-3 rounded-ui-md border px-4 py-3 text-left", selected ? "border-brand bg-blush" : "border-line bg-surface");
+  return (
+    <Modal title={r.title} subtitle={subtitle} onClose={onClose}>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 text-label font-bold text-ink">{r.linked}</legend>
+        {options.map((o) => (
+          <button key={o.candidateId} type="button" role="radio" aria-checked={candidateId === o.candidateId} onClick={() => choose(o)} className={radio(candidateId === o.candidateId)}>
+            <RadioDot on={candidateId === o.candidateId} />
+            <span className="flex min-w-0 flex-col">
+              <span className="text-body font-bold text-ink">{o.name ? r.reportOf.replace("{name}", o.name) : r.reportAnon}</span>
+              <span className="truncate text-caption font-medium text-ink-muted">{[o.date, o.firstLine].filter(Boolean).join(" · ")}</span>
+            </span>
+          </button>
+        ))}
+        <button type="button" role="radio" aria-checked={candidateId === null} onClick={() => choose(null)} className={radio(candidateId === null)}>
+          <RadioDot on={candidateId === null} />
+          <span className="flex flex-col">
+            <span className="text-body font-bold text-ink">{r.none}</span>
+            <span className="text-caption font-medium text-ink-muted">{r.noneHint}</span>
+          </span>
+        </button>
+      </fieldset>
+      <label className="flex flex-col gap-2 text-label font-bold text-ink">
+        <span className="flex items-center gap-1.5">
+          {r.recipient}
+          <span className="rounded-[6px] bg-blush px-1.5 text-caption font-bold text-blush-ink">{r.required}</span>
+        </span>
+        <input value={recipient} maxLength={30} onChange={(e) => setRecipient(e.target.value)} aria-invalid={error === r.recipientRequired || undefined} className="h-12 rounded-ui-sm border-[1.5px] border-line-strong bg-surface px-3.5 text-body font-normal text-ink outline-none focus-visible:border-brand aria-invalid:border-danger" />
+      </label>
+      <div role="radiogroup" aria-label={r.method} className="flex flex-col gap-2">
+        <span className="text-label font-bold text-ink">{r.method}</span>
+        <div className="flex flex-wrap gap-1.5">
+          {methods.map((m) => (
+            <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)} className={cn("flex h-9 items-center rounded-ui-pill border px-3 text-label font-bold", method === m ? "border-brand bg-blush text-blush-ink" : "border-line bg-surface text-ink")}>
+              {r.methods[m]}
+            </button>
+          ))}
+        </div>
+        {methods.length < 6 ? <p className="text-caption font-medium text-ink-muted">{r.strictHint}</p> : null}
+      </div>
+      <label className="flex flex-col gap-2 text-label font-bold text-ink">
+        {r.note}
+        <textarea value={note} maxLength={200} rows={2} onChange={(e) => setNote(e.target.value)} className="min-h-[68px] rounded-ui-sm border-[1.5px] border-line-strong bg-surface px-3.5 py-3 text-body font-normal text-ink outline-none focus-visible:border-brand" />
+      </label>
+      <FieldError message={error} />
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="flex h-11 items-center rounded-ui-sm border border-line-strong bg-surface px-4 text-button font-bold text-ink">
+          {r.cancel}
+        </button>
+        <button type="button" disabled={pending} onClick={submit} className="flex h-11 items-center gap-1.5 rounded-ui-sm bg-brand px-4 text-button font-bold text-on-brand disabled:opacity-85">
+          {pending ? <Icon name="spinner" size={16} className="animate-spin" /> : null}
+          {r.submit}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function RadioDot({ on }: { on: boolean }) {
+  return (
+    <span aria-hidden className={cn("flex size-5 shrink-0 items-center justify-center rounded-ui-pill border-2", on ? "border-brand" : "border-line-strong")}>
+      {on ? <span className="size-2.5 rounded-ui-pill bg-brand" /> : null}
+    </span>
   );
 }
 
@@ -168,5 +279,21 @@ export function RetryAnalysis({ id }: { id: string }) {
         {t.retryAnalysis}
       </button>
     </div>
+  );
+}
+
+/** Figma 22:2963: "반환 완료했어요." for a few seconds after A-09. */
+export function ReturnedToast({ text }: { text: string }) {
+  const [shown, setShown] = useState(true);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShown(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, []);
+  if (!shown) return null;
+  return (
+    <p role="status" className="fixed bottom-20 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-ui-pill bg-ink px-4 py-2.5 text-label font-bold text-on-brand shadow-pop md:bottom-8">
+      <Icon name="check" size={16} />
+      {text}
+    </p>
   );
 }

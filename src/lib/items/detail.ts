@@ -25,7 +25,7 @@ export type ItemDetail = {
     tie: boolean;
     infoLow: boolean;
     judged: boolean;
-    report: { id: string; description: string; createdAt: string; status: ReportStatus } | null;
+    report: { id: string; description: string; createdAt: string; status: ReportStatus; contactName: string | null } | null;
   }[];
   events: { type: string; createdAt: string; byAdmin: boolean; note: string | null }[];
 };
@@ -44,7 +44,7 @@ export async function getItemDetail(id: string): Promise<ItemDetailResult> {
     supabase.from("facilities").select("transfer_days").eq("id", item.facility_id).single(),
     supabase
       .from("match_candidates")
-      .select("id, status, score, coverage, breakdown, report:lost_reports(id, description, created_at, status)")
+      .select("id, status, score, coverage, breakdown, report:lost_reports(id, description, created_at, status, contact_name)")
       .eq("found_item_id", id)
       .neq("status", "dismissed")
       .order("score", { ascending: false }),
@@ -65,7 +65,7 @@ export async function getItemDetail(id: string): Promise<ItemDetailResult> {
         high: c.score >= DEFAULT_MATCH_CONFIG.notifyThreshold,
         ...reasonsOf(c.breakdown),
         infoLow: c.coverage < DEFAULT_MATCH_CONFIG.coverageMinNotify,
-        report: c.report ? { id: c.report.id, description: c.report.description, createdAt: c.report.created_at, status: c.report.status } : null,
+        report: c.report ? { id: c.report.id, description: c.report.description, createdAt: c.report.created_at, status: c.report.status, contactName: c.report.contact_name } : null,
       })),
       events: events.data.map((e) => ({
         type: e.type,
