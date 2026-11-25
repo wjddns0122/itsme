@@ -230,6 +230,105 @@
         "notice": "이 사진은 외부 AI로 보내지 않아요.",
         "back": "일반 등록으로"
       }
+    },
+    "items": {
+      "title": "습득물",
+      "count": "{n}건",
+      "tabs": {
+        "all": "전체",
+        "review": "확인 필요",
+        "analyzing": "분석 중"
+      },
+      "searchPlaceholder": "어떤 물건을 찾으세요? 예) 검은 이어폰 은색 키링",
+      "searchLabel": "습득물 검색",
+      "filterStatus": "상태",
+      "filterCategory": "분류",
+      "filterPeriod": "기간",
+      "sort": "정렬",
+      "all": "전체",
+      "periods": {
+        "7": "최근 7일",
+        "30": "최근 30일",
+        "90": "최근 90일",
+        "all": "전체 기간"
+      },
+      "sorts": {
+        "latest": "최신순",
+        "oldest": "오래된 순"
+      },
+      "columns": {
+        "photo": "사진",
+        "category": "분류",
+        "summary": "공개 설명",
+        "foundAt": "습득일",
+        "storage": "보관 위치",
+        "status": "상태",
+        "candidates": "후보"
+      },
+      "candidates": "후보 {n}",
+      "noPhoto": "사진 없음",
+      "empty": "아직 등록한 습득물이 없어요. 첫 습득물을 등록해 보세요.",
+      "noResult": "비슷한 습득물이 없어요. 분실 신고를 대신 접수할까요?",
+      "proxyReport": "대신 접수하기",
+      "range": "{from}–{to} / {total}건",
+      "prev": "이전 페이지",
+      "next": "다음 페이지",
+      "loadError": "습득물 목록을 불러오지 못했어요. 다시 시도해 주세요.",
+      "retry": "다시 시도"
+    },
+    "item": {
+      "back": "습득물 목록",
+      "info": "물건 정보",
+      "edit": "수정",
+      "cancelEdit": "취소",
+      "saveEdit": "저장",
+      "rows": {
+        "category": "분류",
+        "color": "색상",
+        "brand": "브랜드",
+        "summary": "공개 설명",
+        "private": "비공개 특징",
+        "found": "습득",
+        "storage": "보관 위치",
+        "due": "보관 기한"
+      },
+      "guessed": "(추정)",
+      "dueValue": "{date}까지 ({days}일)",
+      "none": "없음",
+      "photoCount": "습득물 사진 {n} / {total}",
+      "candidates": "매칭 후보",
+      "noCandidates": "아직 비슷한 분실 신고가 없어요.",
+      "history": "처리 이력",
+      "events": {
+        "registered": "등록",
+        "edited": "정보 수정",
+        "report_created": "분실 신고",
+        "matched": "매칭 후보",
+        "claim_requested": "확인 요청",
+        "approved": "승인",
+        "rejected": "거절",
+        "returned": "반환",
+        "transferred": "경찰 이관",
+        "disposed": "폐기",
+        "candidate_dismissed": "후보 숨김",
+        "report_cancelled": "신고 취소"
+      },
+      "byAdmin": "관리자",
+      "actions": {
+        "return": "반환 처리",
+        "transfer": "경찰 이관",
+        "dispose": "폐기 처리"
+      },
+      "confirm": {
+        "transfer": "경찰(LOST112)로 이관했나요? 이관하면 이 물건에 대한 확인 요청이 모두 닫혀요.",
+        "dispose": "폐기 처리할까요? 처리하면 이 물건에 대한 확인 요청이 모두 닫혀요.",
+        "note": "메모 (선택)",
+        "yes": "처리할게요",
+        "no": "아니요"
+      },
+      "notFound": "습득물을 찾을 수 없어요.",
+      "saved": "저장했어요.",
+      "failed": "처리하지 못했어요. 잠시 후 다시 시도해 주세요."
     }
   },
   "facilityTypes": {
@@ -239,5 +338,20 @@
     "festival": "축제·행사",
     "cafe": "카페·식당",
     "other": "기타"
+  },
+  "itemStatus": {
+    "stored": "보관 중",
+    "claimed": "확인 중",
+    "returned": "반환 완료",
+    "transferred": "경찰 이관",
+    "disposed": "처리 완료"
+  },
+  "candidateStatus": {
+    "suggested": "찾는 중",
+    "claimed": "확인 요청 중",
+    "needs_proof": "추가 증빙 요청",
+    "approved": "승인됨",
+    "rejected": "거절됨",
+    "dismissed": "숨김"
   }
 }

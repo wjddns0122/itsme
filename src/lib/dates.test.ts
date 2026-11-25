@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, addDaysToInstant, formatMonthDay, isIsoDate, seoulLocalToIso, seoulNowLocalInput, seoulToday } from "./dates";
+import { addDays, addDaysToInstant, formatMonthDay, formatSeoulDateTime, formatSeoulFullDate, isIsoDate, seoulLocalToIso, seoulNowLocalInput, seoulToday } from "./dates";
 
 describe("seoulToday", () => {
   it("한국 시간 기준 날짜를 준다 (UTC 15시 = 서울 다음 날 0시)", () => {
@@ -41,5 +41,12 @@ describe("seoul datetime-local", () => {
 
   it("며칠 뒤 시각", () => {
     expect(addDaysToInstant("2026-11-25T05:32:00.000Z", 30)).toBe("2026-12-25T05:32:00.000Z");
+  });
+});
+
+describe("formatSeoul*", () => {
+  it("서울 시각으로 보여준다", () => {
+    expect(formatSeoulDateTime("2026-11-25T05:32:00Z")).toBe("11월 25일 14:32");
+    expect(formatSeoulFullDate("2027-11-24T16:00:00Z")).toBe("2027년 11월 25일");
   });
 });

@@ -9,8 +9,11 @@ import { ADMIN_NAV, isNavItemActive } from "./nav";
 
 /** Bottom tabs below 768px (Figma "BottomTabBar", docs/03-screens.md §4 "모바일 폭에서는 하단 탭"). */
 export function TabBar() {
-  const pathname = usePathname();
+  return <TabBarList pathname={usePathname()} />;
+}
 
+/** Also the Suspense fallback, like SidebarNavList. */
+export function TabBarList({ pathname }: { pathname: string | null }) {
   return (
     <nav
       aria-label={ko.admin.nav.label}
@@ -18,7 +21,7 @@ export function TabBar() {
     >
       <ul className="flex items-center justify-between">
         {ADMIN_NAV.map((item) => {
-          const active = isNavItemActive(pathname, item);
+          const active = pathname !== null && isNavItemActive(pathname, item);
           return (
             <li key={item.key}>
               <Link

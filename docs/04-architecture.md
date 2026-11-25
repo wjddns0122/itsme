@@ -487,8 +487,8 @@ Storage 정책: 경로 첫 폴더(`(storage.foldername(name))[1]`)가 내 시설
 | `createFoundItem` | 양식 값 + `photoPaths` + `extraction` 원본 + `registerStartedAt` | 저장, `transfer_due_at` 계산, 이벤트 `registered`. `after()`로 역방향 매칭 (후보 추리기 → AI 유사도 판정) | `{ id }` |
 | `quickCreateFoundItem` | 사진 + 보관 위치 + `registerStartedAt` | 바로 저장(`ai_status = pending`). `after()`로 AI 분석 → 필드 채움 → 확신도 0.6 미만이나 민감 물품이면 `review_needed = true` → 매칭 | `{ id }` |
 | `createSensitiveItem` | 분류 + 사진 + 보관 위치 | AI 분석 없이 저장 (`ai_status = skipped`, `is_sensitive = true`). 사진은 외부 AI로 보내지 않는다 | `{ id }` |
-| `updateFoundItem` | `id` + 바뀐 필드 | 특징 관련 필드가 바뀌면 `after()`로 재매칭. 이벤트 `edited` | `{ id }` |
-| `setFoundItemStatus` | `id`, `transferred` \| `disposed`, 메모 | 상태 변경, 관련 후보 `dismissed`, 이벤트 | `{ id }` |
+| `updateFoundItem` | `id` + 등록과 같은 양식 값 (사진 제외) | `search_text`·`transfer_due_at` 다시 계산. 특징 관련 필드가 바뀌면 `after()`로 재매칭. 이벤트 `edited` (`feature_changed`) | `{ id }` |
+| `setFoundItemStatus` | `id`, `transferred` \| `disposed`, 메모 | `stored`·`claimed`에서만. 상태 변경, 열린 후보 `dismissed (item_transferred|item_disposed)`, 다른 확인 요청이 없는 신고는 `open`으로, 이벤트 — 한 트랜잭션 (`set_found_item_status` RPC, security invoker) | `{ id }` |
 | `markReturned` | `id`, `candidateId?`, 수령인, 확인 방법, 메모 | 습득물 `returned`, 후보 `approved` 유지, 신고 `resolved`, 같은 습득물의 다른 후보 `dismissed (item_returned)`, 이벤트 `returned` — 한 트랜잭션 (RPC) | `{ id }` |
 | `searchItems` | `query` 문자열 | `search_items` RPC (키워드·글자 유사도, pg_trgm) | 습득물 목록 |
 | `retryAnalysis` | `id` | `ai_status = failed`인 습득물·신고 재처리 | `{ id }` |

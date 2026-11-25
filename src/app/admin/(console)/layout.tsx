@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { AdminHeader, AdminHeaderFallback } from "@/components/admin/admin-header";
 import { PendingClaimsBadge } from "@/components/admin/pending-claims-badge";
-import { SidebarNav } from "@/components/admin/sidebar-nav";
-import { TabBar } from "@/components/admin/tab-bar";
+import { SidebarNav, SidebarNavList } from "@/components/admin/sidebar-nav";
+import { TabBar, TabBarList } from "@/components/admin/tab-bar";
 import { AppIcon } from "@/components/app-icon";
 import { Icon } from "@/components/icon";
 import ko from "../../../../messages/ko.json";
@@ -17,13 +17,15 @@ export default function AdminConsoleLayout({ children }: LayoutProps<"/admin">) 
           <AppIcon size="md" />
           <span className="font-brand text-character text-ink">{ko.admin.brand}</span>
         </div>
-        <SidebarNav
-          claimsBadge={
-            <Suspense fallback={null}>
-              <PendingClaimsBadge />
-            </Suspense>
-          }
-        />
+        <Suspense fallback={<SidebarNavList pathname={null} claimsBadge={null} />}>
+          <SidebarNav
+            claimsBadge={
+              <Suspense fallback={null}>
+                <PendingClaimsBadge />
+              </Suspense>
+            }
+          />
+        </Suspense>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col pb-16 md:pb-0">
@@ -33,7 +35,9 @@ export default function AdminConsoleLayout({ children }: LayoutProps<"/admin">) 
         <Suspense fallback={<AdminPageLoading />}>{children}</Suspense>
       </div>
 
-      <TabBar />
+      <Suspense fallback={<TabBarList pathname={null} />}>
+        <TabBar />
+      </Suspense>
     </div>
   );
 }

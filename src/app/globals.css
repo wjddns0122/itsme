@@ -24,6 +24,9 @@
   --color-danger: #9f1d2c; /* color/feedback/danger */
   --color-warn-bg: #fff1cf; /* color/feedback/warn-bg */
   --color-ok: #1e6e44; /* color/feedback/ok */
+  --color-ok-bg: #e3f3e9; /* color/feedback/ok-bg */
+  --color-violet: #5b3fb0; /* color/feedback/violet */
+  --color-violet-bg: #efebfa; /* color/feedback/violet-bg */
   --color-info: #2b57b5; /* color/feedback/info (links) */
   --color-info-bg: #e9f0fb; /* color/feedback/info-bg */
   --color-ai-fill: #eef3fd; /* color/state/ai-fill: fields the AI filled */

@@ -45,3 +45,16 @@ export function seoulLocalToIso(value: string): string | null {
 export function addDaysToInstant(iso: string, days: number): string {
   return new Date(new Date(iso).getTime() + days * 86_400_000).toISOString();
 }
+
+/** "11월 25일 14:32" in Seoul time. */
+export function formatSeoulDateTime(iso: string): string {
+  const local = seoulNowLocalInput(new Date(iso));
+  const [date, time] = local.split("T");
+  return `${formatMonthDay(date)} ${time}`;
+}
+
+/** "2027년 11월 25일" in Seoul time. */
+export function formatSeoulFullDate(iso: string): string {
+  const [y, m, d] = seoulToday(new Date(iso)).split("-").map(Number);
+  return `${y}년 ${m}월 ${d}일`;
+}

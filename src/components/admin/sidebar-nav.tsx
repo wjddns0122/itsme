@@ -10,13 +10,16 @@ import { ADMIN_NAV, isNavItemActive } from "./nav";
 
 /** Left menu items (Figma "Sidebar"). `claimsBadge` is the pending-claims count, rendered on the server. */
 export function SidebarNav({ claimsBadge }: { claimsBadge: ReactNode }) {
-  const pathname = usePathname();
+  return <SidebarNavList pathname={usePathname()} claimsBadge={claimsBadge} />;
+}
 
+/** Also the Suspense fallback: on routes with a request-time param (/admin/items/[id]) the path is unknown while prerendering. */
+export function SidebarNavList({ pathname, claimsBadge }: { pathname: string | null; claimsBadge: ReactNode }) {
   return (
     <nav aria-label={ko.admin.nav.label}>
       <ul className="flex flex-col gap-1">
         {ADMIN_NAV.map((item) => {
-          const active = isNavItemActive(pathname, item);
+          const active = pathname !== null && isNavItemActive(pathname, item);
           return (
             <li key={item.key}>
               <Link

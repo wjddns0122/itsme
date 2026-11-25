@@ -659,6 +659,14 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      set_found_item_status: {
+        Args: {
+          p_item_id: string
+          p_note?: string
+          p_status: Database["public"]["Enums"]["found_status"]
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       ai_status: "pending" | "done" | "failed" | "skipped"

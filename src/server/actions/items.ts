@@ -1,5 +1,6 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { getAi } from "@/lib/ai/client";
 import { extractFoundItem, type ExtractionResult } from "@/lib/ai/extract";
 import { getAdminContext } from "@/lib/auth/admin";
@@ -14,10 +15,13 @@ import { categoryLabel } from "@/lib/validation/constants";
 import {
   FoundItemFormSchema,
   ITEM_LIMITS,
+  ItemStatusChangeSchema,
   MAX_PHOTO_BYTES,
   SensitiveItemSchema,
+  UpdateItemSchema,
   splitFeatures,
   type FoundItemForm,
+  type UpdateItemInput,
 } from "@/lib/validation/item";
 import type { ActionResult } from "./result";
 
@@ -167,6 +171,71 @@ export async function createSensitiveItem(formData: FormData): Promise<ActionRes
 
   await recordRegistered(supabase, facility.id, item.id, userId, { ai_status: "skipped", sensitive: true });
   return { ok: true, data: { id: item.id } };
+}
+
+/** A-05 [수정]. Search text is rebuilt so matching and keyword search see the new values. */
+export async function updateFoundItem(input: UpdateItemInput): Promise<ActionResult<{ id: string }>> {
+  const parsed = UpdateItemSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid_input" };
+  const form = parsed.data;
+  const foundAt = seoulLocalToIso(form.foundAt);
+  if (!foundAt) return { ok: false, error: "invalid_input" };
+
+  const { userId, facility } = await getAdminContext();
+  const supabase = await createClient();
+  const [{ data: current, error: readError }, { data: fac, error: facError }] = await Promise.all([
+    supabase.from("found_items").select("features, material, status, category, colors, brand, subcategory, private_features").eq("id", form.id).maybeSingle(),
+    supabase.from("facilities").select("transfer_days, areas").eq("id", facility.id).single(),
+  ]);
+  if (readError || facError) return failed("update_read", readError?.code ?? facError?.code ?? "");
+  if (!current) return { ok: false, error: "not_found" };
+
+  const privateFeatures = splitFeatures(form.privateFeatures);
+  const { error } = await supabase
+    .from("found_items")
+    .update({
+      category: form.category,
+      subcategory: form.subcategory,
+      colors: form.colors,
+      brand: form.brand,
+      public_summary: form.publicSummary,
+      private_features: privateFeatures,
+      is_sensitive: form.isSensitive,
+      search_text: buildSearchText({ category: form.category, subcategory: form.subcategory, colors: form.colors, brand: form.brand, material: current.material, features: current.features }, privateFeatures),
+      found_at: foundAt,
+      found_area: form.foundArea && fac.areas.includes(form.foundArea) ? form.foundArea : null,
+      storage_location: form.storageLocation,
+      transfer_due_at: addDaysToInstant(foundAt, fac.transfer_days),
+    })
+    .eq("id", form.id);
+  if (error) return failed("update", error.code);
+
+  // Fields that change what the item looks like; matching re-runs on them once FL-031 lands.
+  const featureChanged =
+    current.category !== form.category ||
+    current.subcategory !== form.subcategory ||
+    current.brand !== form.brand ||
+    current.colors.join() !== form.colors.join() ||
+    current.private_features.join() !== privateFeatures.join();
+  const { error: eventError } = await supabase
+    .from("item_events")
+    .insert({ facility_id: facility.id, found_item_id: form.id, actor: userId, type: "edited", payload: { feature_changed: featureChanged } });
+  if (eventError) console.error(JSON.stringify({ event: "item_event_failed", code: eventError.code }));
+
+  refresh();
+  return { ok: true, data: { id: form.id } };
+}
+
+/** A-05 [경찰 이관] / [폐기 처리]: one transaction in set_found_item_status (FL-043). */
+export async function setFoundItemStatus(input: { id: string; status: "transferred" | "disposed"; note: string | null }): Promise<ActionResult<{ id: string }>> {
+  const parsed = ItemStatusChangeSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid_input" };
+  await getAdminContext();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_found_item_status", { p_item_id: parsed.data.id, p_status: parsed.data.status, p_note: parsed.data.note ?? undefined });
+  if (error) return failed("set_status", error.code);
+  refresh();
+  return { ok: true, data: { id: parsed.data.id } };
 }
 
 function readPhotos(formData: FormData, min: number): File[] | null {

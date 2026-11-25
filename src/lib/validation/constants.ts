@@ -49,3 +49,24 @@ export function categoryGroup(code: string): string {
 export function categoryLabel(code: string): string {
   return CATEGORIES.find((c) => c.code === code)?.label ?? "기타";
 }
+
+/** Top-level groups for list filters and compact labels (A-04 표의 분류 열). */
+export const CATEGORY_GROUPS = [
+  { group: "electronics", label: "전자기기" },
+  { group: "wallet_card", label: "지갑·카드" },
+  { group: "bag", label: "가방" },
+  { group: "clothing", label: "옷·장갑" },
+  { group: "sports", label: "고글·헬멧" },
+  { group: "accessory", label: "안경·액세서리" },
+  { group: "key", label: "열쇠" },
+  { group: "umbrella", label: "우산" },
+  { group: "document", label: "서류·책" },
+  { group: "other", label: "기타" },
+] as const;
+
+export type CategoryGroup = (typeof CATEGORY_GROUPS)[number]["group"];
+
+export function categoryGroupLabel(code: string): string {
+  const group = categoryGroup(code);
+  return CATEGORY_GROUPS.find((g) => g.group === group)?.label ?? "기타";
+}

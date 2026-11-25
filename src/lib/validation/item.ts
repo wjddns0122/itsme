@@ -63,3 +63,25 @@ export function splitFeatures(text: string): string[] {
 
 /** Below this confidence a quickly registered item goes to the "확인 필요" tab (docs/04 §6-1). */
 export const REVIEW_CONFIDENCE = 0.6;
+
+/** A-05 [수정]: the same fields as registration, without photos and AI metadata. */
+export const UpdateItemSchema = FoundItemFormSchema.pick({
+  category: true,
+  subcategory: true,
+  colors: true,
+  brand: true,
+  publicSummary: true,
+  privateFeatures: true,
+  isSensitive: true,
+  foundAt: true,
+  foundArea: true,
+  storageLocation: true,
+}).extend({ id: z.uuid() });
+
+export type UpdateItemInput = z.input<typeof UpdateItemSchema>;
+
+export const ItemStatusChangeSchema = z.object({
+  id: z.uuid(),
+  status: z.enum(["transferred", "disposed"]),
+  note: z.string().trim().max(200).nullable(),
+});
