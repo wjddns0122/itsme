@@ -617,3 +617,5 @@ return { ok: true, data: { token: report.access_token } };
 - Supabase 프로젝트 1개 (MVP). Phase 1에서 개발/운영 분리.
 - 시드: `pnpm db:seed -- --project-ref <ref>` (`scripts/seed.mts`, 원격은 대상 프로젝트 ref를 명시해야 실행) — 예시 시설 5곳(스키장 `transfer_days` 365, 학교·리조트·카페·축제 30, 모두 `is_listed`), 시설마다 관리자 1명(`admin.<slug>@example.com`, 비밀번호는 `.env.local`의 `SEED_ADMIN_PASSWORD`), 구역 목록. 다시 실행해도 된다. 이미 있는 시설은 덮어쓰지 않고, 이름이 시드 예시 이름 그대로인 시설에만 관리자를 연결한다. 공개 가입은 끈다 (관리자 계정은 시드·초대로만).
 - 리전: Supabase는 서울(`ap-northeast-2`), Vercel 함수 리전도 서울(`icn1`)로 맞춘다.
+- 실제 구성 (2026-11-25, FL-006): GitHub 비공개 저장소 `wjddns0122/itsme`, Vercel 프로젝트 `itsme`(Git 연결, `main` push = 운영 배포). 함수 리전은 `vercel.json`의 `regions: ["icn1"]`.
+- 환경변수는 `.env.local`에서 값이 화면에 나오지 않게 `vercel env add`로 운영·미리보기에 등록한다 (`.claude/skills/deploy/deploy-config.md` 표). `NEXT_PUBLIC_APP_URL`은 운영 주소로 따로 등록한다. 운영은 `GEMINI_TIER=paid`가 아니면 AI를 쓰지 않는다 (ADR-025, `lib/ai/client.ts`).

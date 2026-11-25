@@ -92,12 +92,12 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] `GEMINI_TIER=free`면 서버 시작 로그에 "테스트 데이터만" 경고 (ADR-025)
 - 참고: `05-ai-matching.md` §8
 
-### FL-006 · 배포
+### FL-006 · 배포 🟡 운영 배포 완료, 관리자 로그인은 사람 확인 남음
 - P0 · 0.5h · 의존 FL-001
 - 수용 기준
-  - [ ] Vercel 연결, `main` 자동 배포, 환경변수 등록
-  - [ ] 함수 리전 서울, Supabase 리전 서울
-  - [ ] 배포 URL에서 로그인까지 동작
+  - [x] Vercel 연결, `main` 자동 배포, 환경변수 등록 — 저장소 `wjddns0122/itsme`(비공개), 프로젝트 `itsme`, 운영 주소 https://itsme-theta-gold.vercel.app
+  - [x] 함수 리전 서울, Supabase 리전 서울 (`vercel.json` `icn1`, 빌드 결과에서 함수가 `icn1`)
+  - [ ] 배포 URL에서 로그인까지 동작 — `/`, 시설 검색, `/f/pc-ski`, 신고 화면, 신고 현황, `/admin/login`은 열림. 실제 로그인은 시드 비밀번호를 아는 사람이 확인
 - 참고: `04-architecture.md` §11
 
 ---
