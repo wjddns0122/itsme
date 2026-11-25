@@ -23,12 +23,12 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 |---|---|---|
 | E0 셋업 | FL-001 ~ FL-006 | Day 1 |
 | E1 습득물 등록·관리 | FL-010 ~ FL-016 | Day 1 (FL-011 스파이크), Day 2 오전 |
-| E2 분실 신고·반복 문의 | FL-020 ~ FL-027 | Day 2 오후, Day 3 오전 |
+| E2 분실 신고·반복 문의 | FL-020 ~ FL-028 | Day 2 오후, Day 3 오전 |
 | E3 매칭 | FL-030 ~ FL-034 | Day 2 저녁 |
 | E4 소유권 확인·반환 | FL-040 ~ FL-045 | Day 3 오전 |
-| E5 알림 | FL-050 | Day 3 오전 ✂️ |
+| E5 알림 | FL-050 | Day 3 오전 |
 | E6 대시보드 | FL-060 ~ FL-061 | Day 3 오전 |
-| E7 시설 설정·QR | FL-070 ~ FL-071 | Day 3 오전 |
+| E7 시설 설정·공개 페이지 (QR은 P1) | FL-070 ~ FL-071 | Day 3 오전 |
 | E8 평가·지표 | FL-080 ~ FL-082 | Day 3 오후 |
 | P1 | FL-090 ~ | 해커톤 이후 |
 
@@ -50,46 +50,47 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [x] Claude Code 설정: `.claude/` (settings, rules, commands, skills, agents, hooks), `.mcp.json`, `CLAUDE.local.md` (ADR-014)
 - 참고: `CLAUDE.md`
 
-### FL-002 · DB 스키마 마이그레이션
+### FL-002 · DB 스키마 마이그레이션 ✅
 - P0 · 1.5h · 의존 FL-001
-- 범위: `supabase/migrations/0001_init.sql`, `src/lib/supabase/types.ts`
+- 범위: `supabase/migrations/20261125061818_init_schema.sql`, `20261125062436_harden_rls_helpers.sql`, `src/lib/supabase/types.ts`
 - 수용 기준
-  - [ ] `04-architecture.md` §4-2 테이블·enum·인덱스, §4-3 함수, §5-1 RLS 적용
-  - [ ] `mark_returned` RPC: 반환 처리를 한 트랜잭션으로 (§6-1 `markReturned` 설명대로)
-  - [ ] `updated_at` 자동 갱신 트리거
-  - [ ] `supabase db push` 성공, `pnpm db:types`로 타입 생성
-  - [ ] RLS 확인: 다른 시설 관리자 계정으로 습득물 조회 시 0건
+  - [x] `04-architecture.md` §4-2 테이블·enum·인덱스, §4-3 함수, §5-1 RLS 적용
+  - [x] `mark_returned` RPC: 반환 처리를 한 트랜잭션으로 (§6-1 `markReturned` 설명대로)
+  - [x] `updated_at` 자동 갱신 트리거
+  - [x] 원격 적용 성공 (Supabase MCP `apply_migration`), 타입 생성. Supabase security advisor 0건
+  - [x] RLS 확인: 다른 시설 관리자 계정으로 습득물 조회 시 0건 (PGlite 검증 + 원격 시드 계정으로 확인: 다른 시설 습득물·신고 0건, 시설·멤버 1건씩, 검색도 자기 시설만)
 - 참고: `04-architecture.md` §4, §5
 
-### FL-003 · 인증, 관리자 레이아웃, 시드
+### FL-003 · 인증, 관리자 레이아웃, 시드 ✅
 - P0 · 1.5h · 의존 FL-002
-- 범위: `src/lib/supabase/{server,client,admin}.ts`, `src/app/admin/layout.tsx`, `src/app/admin/login/`, `scripts/seed.ts`
+- 범위: `src/lib/supabase/{server,admin,env}.ts`, `src/proxy.ts`, `src/lib/auth/admin.ts`, `src/app/admin/(console)/layout.tsx`, `src/app/admin/login/`, `src/server/actions/auth.ts`, `scripts/seed.mts`. 브라우저용 `client.ts`는 쓰는 곳이 생길 때 만든다 (분실자 데이터는 서버에서만)
 - 수용 기준
-  - [ ] A-01 로그인 (이메일·비밀번호), 로그아웃
-  - [ ] `/admin/*` 비로그인 접근 시 로그인으로 이동
-  - [ ] 관리자 레이아웃: 왼쪽 메뉴, 시설 이름 (`03-screens.md` §4 공통)
-  - [ ] `pnpm db:seed`: 시설 1개 (인덕대 데모, 구역 5개), 관리자 1명
-  - [ ] `admin.ts` 첫 줄 `import 'server-only'`
+  - [x] A-01 로그인 (이메일·비밀번호), 로그아웃
+  - [x] `/admin/*` 비로그인 접근 시 로그인으로 이동 (proxy, 307 확인)
+  - [x] 관리자 레이아웃: 왼쪽 메뉴, 시설 이름 (`03-screens.md` §4 공통), 모바일 하단 탭
+  - [x] `pnpm db:seed`: 데모 시설 5곳 이상 (학교·스키장·리조트·카페, 예시 이름, 지역·구역 포함, `is_listed = true`), 시설별 관리자 1명 — 원격 실행 완료 (5곳, 5명)
+  - [x] `admin.ts` 첫 줄 `import 'server-only'`
 - 참고: `03-screens.md` A-01, `04-architecture.md` §5, §11
 
-### FL-004 · Storage
+### FL-004 · Storage ✅
 - P0 · 0.5h · 의존 FL-002
-- 범위: 마이그레이션 `0002_storage.sql`, `src/lib/storage.ts`
+- 범위: 마이그레이션 `20261125070430_storage_buckets.sql`, `src/lib/storage.ts`, `src/lib/storage-paths.ts`
 - 수용 기준
-  - [ ] 비공개 버킷 `found-items`, `claim-photos`
-  - [ ] 업로드 함수 (서버), 10분 만료 서명 URL 함수
-  - [ ] 다른 시설 경로 읽기 거부 확인
+  - [x] 비공개 버킷 `found-items`, `claim-photos`, `report-photos` (§5-2 표대로 3개, 5MB, jpeg·png·webp)
+  - [x] 업로드 함수 (서버), 10분 만료 서명 URL 함수
+  - [x] 다른 시설 경로 읽기 거부 확인 (원격, 스키장 관리자로 학교 폴더 false·자기 폴더 true·`../` 경로 false)
 - 참고: `04-architecture.md` §5-2
 
-### FL-005 · AI·임베딩 클라이언트
+### FL-005 · AI 클라이언트 (Gemini) ✅
 - P0 · 1h · 의존 FL-001
-- 범위: `src/lib/ai/client.ts`, `src/lib/ai/embed.ts`, `src/lib/ai/log.ts`
+- 범위: `src/lib/ai/client.ts`, `src/lib/ai/json.ts`, `src/lib/ai/log.ts`
 - 수용 기준
-  - [ ] Anthropic SDK 클라이언트 1개, 모델명은 환경변수
-  - [ ] fallback 설정, `stop_reason` 확인 헬퍼 (`refusal`, `max_tokens`)
-  - [ ] `embed(texts: string[]): Promise<number[][]>` — 차원이 `EMBEDDING_DIM`과 다르면 에러
-  - [ ] 호출 로그 `{ kind, model, latency_ms, usage, stop_reason }`, 연락처·토큰 미포함
-- 참고: `05-ai-matching.md` §8, `CLAUDE.md` §7
+  - [ ] `@google/genai` 클라이언트 1개 (`GEMINI_API_KEY`), 모델명은 환경변수
+  - [ ] `generateJson(schema, contents)`: `responseMimeType`·`responseJsonSchema`로 호출 → zod 검증 → 실패·차단(`finishReason` ≠ `STOP`) 시 1회 재시도
+  - [ ] `temperature`를 보내지 않는다
+  - [ ] 호출 로그 `{ kind, model, latency_ms, usageMetadata, finish_reason }`, 연락처·토큰 미포함
+  - [ ] `GEMINI_TIER=free`면 서버 시작 로그에 "테스트 데이터만" 경고 (ADR-025)
+- 참고: `05-ai-matching.md` §8
 
 ### FL-006 · 배포
 - P0 · 0.5h · 의존 FL-001
@@ -154,7 +155,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - 범위: `src/app/admin/items/[id]/`, `updateFoundItem`
 - 수용 기준
   - [ ] 사진 넘겨보기, 전체 정보(비공개 특징 포함), 수정
-  - [ ] 특징 관련 필드 수정 시 재임베딩·재매칭 (`after()`, FL-032 연결 전엔 TODO)
+  - [ ] 특징 관련 필드 수정 시 재매칭 (`after()`, FL-032 연결 전엔 TODO)
   - [ ] 처리 이력 타임라인 (`item_events`)
 - 참고: `03-screens.md` A-05
 
@@ -162,7 +163,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - P0 · 1h · 의존 FL-013, FL-005
 - 범위: A-04 검색창, `searchItems`
 - 수용 기준
-  - [ ] 검색어 임베딩 → `search_items` RPC → 결과 목록
+  - [ ] `search_items` RPC (키워드·글자 유사도, pg_trgm) → 결과 목록. 의미 검색은 Stage 2
   - [ ] 결과 없음 → A-07 대리 신고 유도 문구
   - [ ] "검은 이어폰 은색 키링"으로 시드 데이터의 해당 이어폰이 3위 안
 - 참고: `02-user-flows.md` §7
@@ -172,7 +173,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - 범위: A-03 빠른 등록 토글, `quickCreateFoundItem`, A-04 "확인 필요"·"분석 중" 탭
 - 수용 기준
   - [ ] 사진 → 보관 위치(직전 값) → 저장 → 바로 다음 촬영. 관리자 조작 5초 이내 (직접 측정, AI 대기 제외)
-  - [ ] AI 분석·임베딩·매칭은 백그라운드
+  - [ ] AI 분석·매칭은 백그라운드
   - [ ] 확신도 0.6 미만이나 민감 물품이면 `review_needed = true` → A-04 "확인 필요" 탭
   - [ ] AI가 끝나기 전 항목은 목록에 "분석 중" 표시
 - 참고: `02-user-flows.md` §2-1, `04-architecture.md` §6-1
@@ -181,11 +182,12 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 
 ## E2. 분실 신고
 
-### FL-020 · 시설 랜딩, 습득자 안내
+### FL-020 · 시설 페이지, 습득자 안내
 - P0 · 1h · 의존 FL-003
 - 범위: `src/app/(public)/f/[slug]/page.tsx`, `src/app/(public)/f/[slug]/found/page.tsx`
 - 수용 기준
   - [ ] P-02 버튼 2개, 연락처, 운영 시간
+  - [ ] 검색엔진용 메타데이터: 제목 "{시설 이름} 분실물 찾기 | 잇츠미", 설명. `is_listed = false`면 noindex
   - [ ] P-06 맡기는 곳 안내
   - [ ] 없는 slug → 에러 문구
   - [ ] 시설 정보는 service role로 §9-2 허용 필드만 조회
@@ -205,13 +207,13 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] 중복 제출 방지
 - 참고: `03-screens.md` P-03, `02-user-flows.md` §3, `04-architecture.md` §6-2
 
-### FL-022 · 설명 정규화와 임베딩
+### FL-022 · 설명 정규화와 비교용 텍스트
 - P0 · 1.5h · 의존 FL-011, FL-021
 - 범위: `src/lib/ai/normalize.ts`, `src/lib/matching/search-text.ts`, `processReport`의 앞부분
 - 수용 기준
   - [ ] §4-2 프롬프트, 연락처 미포함 확인 테스트
   - [ ] `buildSearchText` (§2-4) + 단위 테스트
-  - [ ] 정규화 실패 시 원문으로 임베딩, `ai_status = failed`
+  - [ ] 정규화 실패 시 원문으로 판정, `ai_status = failed`
   - [ ] "에어팟 잃어버렸어요" → brand `Apple`, 분류 `electronics.earphones`
 - 참고: `05-ai-matching.md` §2-4, §4
 
@@ -260,17 +262,28 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - P0 · 1.5h · 의존 FL-011, FL-021
 - 범위: P-03 사진 첨부(선택), `report-photos` 버킷, `processReport`의 사진 특징 추출
 - 수용 기준
-  - [ ] 분실자가 물건이 나온 사진 1~3장을 올리면 §4-4 추출 → 정규화 결과와 합쳐 임베딩
+  - [ ] 분실자가 물건이 나온 사진 1~3장을 올리면 §4-4 추출 → 정규화 결과와 합쳐 비교용 텍스트로
   - [ ] 글과 사진이 다르면 글 우선
   - [ ] 사진은 비공개, A-06에서 관리자만 보조 근거로 본다
   - [ ] 글 없이 분류 + 사진만으로도 후보가 나온다 (평가 3건 이상)
 - 참고: `05-ai-matching.md` §4-4, `01-prd.md` F4-7
 
+### FL-028 · 시설 찾기 (홈) ✅
+- P0 · 2h · 의존 FL-002, FL-003
+- 범위: `src/app/(public)/page.tsx`(P-01), `src/lib/facilities/{public,search}.ts`(`searchFacilities`), `search_facilities` RPC, `src/lib/recent-facilities.ts`, `src/components/public/`
+- 수용 기준
+  - [x] 시설 이름·지역 검색, 종류 칩 필터, 결과 → P-02 (`/f/{slug}` 링크. 페이지는 P-02 티켓)
+  - [x] `is_listed = true`인 시설만, §9-2 허용 필드만 반환 (`toPublicFacility` 테스트, 화면 HTML에 주소·`is_listed` 없음 확인)
+  - [x] 결과 없음: 미참여 안내 + LOST112 주소
+  - [x] 최근 본 시설은 이 기기에만 저장 (localStorage, 읽기 실패해도 화면은 정상). 저장은 P-02에서 `rememberFacility()` 호출
+  - [x] 데모 시설은 실제 상호가 아닌 예시 이름 (ADR-028)
+- 참고: `03-screens.md` P-01, `01-prd.md` F11
+
 ---
 
 ## E3. 매칭
 
-### FL-030 · 점수 함수
+### FL-030 · 점수 함수 ✅
 - P0 · 1.5h · 의존 FL-001
 - 범위: `src/lib/matching/score.ts`, `score.test.ts`
 - 수용 기준
@@ -284,9 +297,10 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 
 ### FL-031 · 매칭 실행
 - P0 · 2h · 의존 FL-022, FL-030
-- 범위: `src/lib/matching/run.ts`
+- 범위: `src/lib/matching/run.ts`, `src/lib/ai/judge.ts`
 - 수용 기준
-  - [ ] `matchForReport(reportId)`, `matchForItem(itemId)` — RPC 호출 → 점수 → 저장
+  - [ ] `matchForReport(reportId)`, `matchForItem(itemId)` — 후보 추리기 RPC → AI 유사도 판정(`05-ai-matching.md` §5-4, 20개씩) → 점수 → 저장
+  - [ ] 판정이 실패한 묶음은 중립값 0.5, 알림 없음
   - [ ] §6 저장 규칙 전부 (upsert, `suggested`만 갱신, dismissed 재생성 금지, 상위 5개)
   - [ ] 같은 함수를 두 번 실행해도 결과 동일 (테스트)
   - [ ] 알림 대상(새로 0.70 이상, coverage 0.65 이상) 목록 반환, `coverage` 저장
@@ -383,7 +397,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 
 ## E5. 알림
 
-### FL-050 · 이메일 ✂️
+### FL-050 · 이메일 (새 후보 자동 알림)
 - P0 · 1.5h · 의존 FL-031, FL-041
 - 범위: `src/lib/notify/`
 - 수용 기준
@@ -413,18 +427,19 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 
 ## E7. 시설 설정·QR
 
-### FL-070 · 시설 설정과 QR PNG
+### FL-070 · 시설 설정과 공개 페이지
 - P0 · 1.5h · 의존 FL-003
-- 범위: `src/app/admin/settings/`, `src/app/api/qr/[slug]/route.ts`
+- 범위: `src/app/admin/settings/`
 - 수용 기준
   - [ ] 시설 정보·구역 목록·보관 기한 수정 (owner만)
-  - [ ] QR 미리보기 + PNG 내려받기 (주소 `NEXT_PUBLIC_APP_URL/f/{slug}`)
+  - [ ] 지역·주소·종류·소개 입력, 시설 페이지 주소 [복사], 검색 노출 동의(`is_listed`)
   - [ ] 홈페이지 메뉴·예약 문자·전화 응대용 링크와 안내 문구 [복사] (`01-prd.md` F1-5)
 - 참고: `03-screens.md` A-08
 
-### FL-071 · QR 포스터 PDF ✂️
-- P0 · 1h · 의존 FL-070
-- 수용 기준: A4 포스터 (시설명, QR, 안내 문구 2줄)
+### FL-071 · QR 코드·포스터 (P1)
+- P1 · 1.5h · 의존 FL-070
+- 범위: `src/app/api/qr/[slug]/route.ts`, A-08 QR 영역
+- 수용 기준: QR PNG 내려받기 (주소 `NEXT_PUBLIC_APP_URL/f/{slug}`) + A4 포스터 (시설명, QR, 안내 문구 2줄). 현장 보조 수단 (ADR-026)
 
 ---
 
@@ -463,7 +478,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 | ID | 내용 | 참고 |
 |---|---|---|
 | FL-090 | 다국어 신고 (EN/JA/ZH): `messages/*.json`, 언어 선택 | PRD §4 P1 |
-| FL-091 | LLM 재순위 | `05-ai-matching.md` §10 |
+| FL-091 | Stage 2: 임베딩 검색 (`gemini-embedding-2` + pgvector) + AI 판정 재순위 | `05-ai-matching.md` §10, ADR-023 |
 | FL-092 | 같은 지역 여러 시설 통합 매칭 | ADR-010 |
 | FL-093 | 이관 기한 알림 (이메일) | PRD §4 P1 |
 | FL-094 | 종료 30일 후 연락처 자동 삭제 (Vercel Cron) | `04-architecture.md` §6-4 |
@@ -471,8 +486,13 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 | FL-096 | 신고 링크 이메일 재발송 | `02-user-flows.md` §10 |
 | FL-097 | 반환 방법: 수령 예약, 대리 수령, 착불 택배, 이관 안내 (P-07) | PRD F10 |
 | FL-098 | Playwright E2E: 등록 → 신고 → 확인 요청 → 반환 | `CLAUDE.md` §3 |
-| FL-099 | 관리자 초대·회원가입 | Q7 |
+| FL-099 | 시설 셀프 등록(멀티테넌트 가입)·관리자 초대 | Q7, ADR-026 |
 | FL-100 | 설명이 비슷한 중복 신고 감지 (연락처가 달라도) | PRD F9-3 |
 | FL-101 | 문의 통계 (요일·시간대·채널별) | PRD §4 P1 |
 | FL-102 | 확인 요청 전 연락처 인증 (이메일 코드) | PRD §4 P1 |
 | FL-103 | AI 상황 기반 추가 질문 (신고 뒤 빈 항목을 채우도록 묻기) | PRD §4 P1 |
+| FL-104 | Stage 3: LangChain(JS)·LangGraph 파이프라인 검토 (문의 응답 챗봇, 시설 간 탐색) | `05-ai-matching.md` §10 |
+| FL-105 | 여러 시설 한 번에 신고 (P-08, `report_groups`) | PRD F11-4, ADR-027 |
+| FL-106 | 지역 기반 통합 탐색 | PRD F11-5 |
+| FL-107 | (P2) 지도에서 시설 찾기 | PRD F11-6 |
+| FL-108 | (P2) 방문 기록 연동 (예약·결제 기록에서 방문 시설 제안) | PRD F11-7 |

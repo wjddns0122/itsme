@@ -8,7 +8,7 @@ AI 코딩 에이전트(Claude Code 등)가 이 저장소에서 작업할 때 따
 
 ## 1. 프로젝트 한 줄
 
-시설 관리자가 습득물 사진을 찍으면 AI가 등록 양식을 채우고, 분실자가 자연어로 쓴 설명과 자동으로 비교해 후보를 추천하고, 관리자 승인을 거쳐 반환까지 관리하는 웹 서비스. 같은 분의 반복 문의를 묶어 관리자의 응대 부담을 줄이는 것도 핵심이다.
+분실자가 방문한 시설을 검색해 한 번만 신고하면, 시설 관리자가 사진으로 등록한 습득물과 AI가 자동으로 비교해 후보를 알려주고, 관리자 승인을 거쳐 반환까지 관리하는 장소 기반 분실물 통합 탐색·시설 관리 웹 서비스. 같은 분의 반복 문의를 묶어 관리자의 응대 부담을 줄이는 것도 핵심이다.
 
 ## 2. 작업 전에 읽을 문서
 
@@ -28,8 +28,8 @@ AI 코딩 에이전트(Claude Code 등)가 이 저장소에서 작업할 때 따
 
 - **Next.js 16** (App Router, TypeScript strict, `cacheComponents` 켜짐). 분실자 화면 `src/app/(public)/`, 관리자 화면 `src/app/admin/`.
 - **Tailwind CSS 4 + shadcn/ui** (`base-nova` 스타일, Base UI 기반)
-- **Supabase**: Postgres + pgvector, Auth, Storage
-- **AI**: Claude API (`@anthropic-ai/sdk`, 기본 모델 `claude-opus-5-5`) / 임베딩 OpenAI `text-embedding-3-small` 1536차원 (ADR-008, 임시)
+- **Supabase**: Postgres(+ pg_trgm), Auth, Storage. pgvector는 Stage 2
+- **AI**: Gemini API (`@google/genai`, 기본 모델 `gemini-4-hydrogen`). 사진 분석(VLM), 문장 정리, 유사도 판정, 소유권 비교. 임베딩(`gemini-embedding-2`)은 Stage 2 (ADR-023, ADR-024)
 - **검증** zod / **폼** react-hook-form / **이메일** Resend / **배포** Vercel
 - **패키지 매니저** pnpm / **테스트** Vitest (단위), Playwright (E2E, P1)
 
@@ -45,6 +45,7 @@ pnpm typecheck    # next typegen && tsc --noEmit
 pnpm lint         # ESLint
 pnpm test         # Vitest
 pnpm db:types     # Supabase 타입 생성 → src/lib/supabase/types.ts (FL-002 이후)
+pnpm db:seed -- --project-ref <ref>  # 예시 시설 5곳 + 시설별 관리자 (SEED_ADMIN_PASSWORD 필요, 원격 DB에 씀)
 pnpm eval         # 매칭 평가 (FL-081에서 추가, 실제 API 비용 발생)
 supabase migration new <name>
 ```
@@ -55,7 +56,8 @@ supabase migration new <name>
 src/
   app/
     (public)/              # 분실자 화면: 로그인 없음, 모바일 우선
-      f/[slug]/            # 시설 QR 랜딩, 분실 신고
+      page.tsx             # 시설 찾기 (P-01)
+      f/[slug]/            # 시설 페이지(검색·링크·QR 공통), 분실 신고
       r/[token]/           # 신고 현황, 매칭 후보, 소유권 확인 요청
     admin/                 # 시설 관리자 화면: 로그인 필요
     api/                   # 크론·QR 등 route handler (필요할 때만)
@@ -88,6 +90,7 @@ docs/                      # 기획·설계 문서 (기준 문서)
 7. **비밀값은 코드·로그·커밋에 넣지 않는다.** 변수 이름만 `.env.example`에.
 8. **문서가 기준이다.** 동작을 바꾸면 같은 변경에서 문서도 고친다. 문서에 없는 비즈니스 규칙은 지어내지 말고 `docs/07-decisions.md` 미결 질문에 추가한 뒤 물어본다.
 9. **검색은 관대하게, 반환은 엄격하게.** 모르는 항목은 점수에서 빼고(불이익 없음), 반환은 확인 질문·관리자 승인·추가 증빙을 거친다.
+10. **Gemini 무료 등급 키로는 테스트 데이터만 보낸다.** 실제 분실자 정보·사진은 유료 등급 키로만 (ADR-025).
 
 ## 7. 작업 방식
 

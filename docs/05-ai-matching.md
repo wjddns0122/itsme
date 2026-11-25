@@ -7,23 +7,24 @@
 
 ## 1. 개요
 
-모델을 학습하지 않는다. 사진과 문장을 **같은 형식의 구조화 데이터**로 바꾼 뒤, 그 텍스트의 임베딩과 속성을 비교한다.
+모델을 학습하지 않는다. 사진과 문장을 **같은 형식의 구조화 데이터**로 바꾼 뒤, SQL로 후보를 줄이고 **파운데이션 모델(Gemini)이 후보와 직접 비교**한다 (Stage 1). 임베딩 검색은 데이터가 쌓인 뒤 Stage 2에서 붙인다 (§10, ADR-023).
 
 ```mermaid
 flowchart LR
     subgraph found["습득물"]
-        P["사진 1~3장"] --> X["Claude: 사진 분석 §3"]
+        P["사진 1~3장"] --> X["Gemini VLM: 사진 분석 §3"]
         X --> D1["ItemDescriptor + 공개/비공개 구분"]
     end
     subgraph lost["분실 신고"]
-        T["자연어 설명"] --> N["Claude: 설명 정규화 §4"]
+        T["자연어 설명"] --> N["Gemini: 설명 정규화 §4"]
         N --> D2["ItemDescriptor"]
     end
-    D1 --> S1["buildSearchText"] --> E1["임베딩"]
-    D2 --> S2["buildSearchText"] --> E2["임베딩"]
-    E1 --> V["pgvector 후보 20개"]
-    E2 --> V
-    V --> SC["score.ts: 특징 60 + 장소 25 + 날짜 15 §5"]
+    D1 --> S1["buildSearchText"]
+    D2 --> S2["buildSearchText"]
+    S1 --> F["SQL 후보 추리기: 시설·날짜·분류, 최대 60개"]
+    S2 --> F
+    F --> J["Gemini: 유사도 판정 §5-4, 20개씩"]
+    J --> SC["score.ts: AI 특징 유사도 + 분류·색상·브랜드 + 장소 + 날짜 §5"]
     SC --> C["후보 저장 0.45 이상, 최대 5개"]
 ```
 
@@ -31,11 +32,13 @@ AI 호출은 다섯 종류다.
 
 | 호출 | 시점 | 모델 | 사용자가 기다리나 |
 |---|---|---|---|
-| 사진 분석 | 관리자 등록 화면 | `VISION_MODEL` (기본 `claude-opus-5-5`) | 예 → p95 8초 목표 |
-| 설명 정규화 | 신고 저장 후 백그라운드 | `LLM_MODEL` (기본 `claude-opus-5-5`) | 아니오 |
-| 임베딩 | 습득물·신고 저장 후, 관리자 검색 시 | `EMBEDDING_MODEL` (기본 `text-embedding-3-small`) | 검색 시에만 |
-| 소유권 답변 비교 | 확인 요청 제출 후 백그라운드 | `LLM_MODEL` (기본 `claude-opus-5-5`) | 아니오 (관리자가 A-06에서 봄) |
+| 사진 분석 (VLM) | 관리자 등록 화면 | `VISION_MODEL` (기본 `gemini-4-hydrogen`) | 예 → p95 8초 목표 |
+| 설명 정규화 | 신고 저장 후 백그라운드 | `LLM_MODEL` (기본 `gemini-4-hydrogen`) | 아니오 |
+| 유사도 판정 | 신고·습득물 저장 후 백그라운드 (후보 20개씩) | `LLM_MODEL` | 아니오 |
+| 소유권 답변 비교 | 확인 요청 제출 후 백그라운드 | `LLM_MODEL` | 아니오 (관리자가 A-06에서 봄) |
 | 분실자 사진 특징 추출 | 분실자가 사진을 올렸을 때 백그라운드 | `VISION_MODEL` | 아니오 |
+
+임베딩(`gemini-embedding-2`)은 Stage 2에서 추가한다 (§10). 호출 규칙은 §8.
 
 ## 2. 공통 스키마
 
@@ -105,12 +108,12 @@ export const LostReportNormalization = ItemDescriptor.extend({
 });
 ```
 
-- structured outputs가 지원하지 않는 스키마 제약이 있을 수 있으므로, **모델에 넘기는 스키마는 단순하게** 두고 개수·범위 검증(색상 3개 이하, features 8개 이하, confidence 0~1)은 파싱 후 코드에서 한다.
+- Gemini 구조화 출력(`responseJsonSchema`)이 지원하지 않는 스키마 제약이 있을 수 있으므로, **모델에 넘기는 스키마는 단순하게** 두고 개수·범위 검증(색상 3개 이하, features 8개 이하, confidence 0~1)은 파싱 후 코드에서 한다.
 - `features`(공개)와 `private_features`(비공개)의 구분이 이 서비스의 핵심 안전장치다.
 
-### 2-4. 임베딩 입력 텍스트 (`buildSearchText`)
+### 2-4. 비교용 텍스트 (`buildSearchText`)
 
-LLM이 자유롭게 쓴 문장이 아니라 **코드가 같은 틀로 만든 텍스트**를 임베딩한다. 습득물과 신고가 같은 형식이어야 유사도가 안정적이다.
+LLM이 자유롭게 쓴 문장이 아니라 **코드가 같은 틀로 만든 텍스트**를 AI 유사도 판정(§5-4)과 관리자 키워드 검색에 쓴다. 습득물과 신고가 같은 형식이어야 비교가 안정적이다. Stage 2에서는 이 텍스트를 그대로 임베딩한다.
 
 ```ts
 export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string {
@@ -125,7 +128,7 @@ export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string
 }
 ```
 
-- 습득물: `extra = private_features` (비공개 특징도 임베딩에는 넣는다. 벡터는 외부에 노출되지 않는다).
+- 습득물: `extra = private_features` (비공개 특징도 넣는다. 이 텍스트는 서버 안에서 AI 판정에만 쓰고 분실자에게 보내지 않는다).
 - 신고: 정규화 입력에 `secret_detail`을 함께 넣으므로 별도 `extra` 없음.
 
 ## 3. 습득물 사진 분석
@@ -133,8 +136,8 @@ export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string
 ### 3-1. 호출
 
 - 입력: 이미지 1~3장 (base64 JPEG, 긴 변 1280px) + 텍스트 `시설 종류: {facility.type} / 습득 구역: {found_area 또는 "미입력"}`
-- 출력: `FoundItemExtraction` (structured outputs)
-- 설정: `output_config.effort: "low"`, `max_tokens: 8000`, SDK `timeout` 15초, `maxRetries` 1
+- 출력: `FoundItemExtraction` (구조화 출력 `responseJsonSchema`)
+- 설정: `responseMimeType: "application/json"`, `responseJsonSchema`, 낮은 `thinkingLevel`부터 (값 이름은 SDK 문서 확인), 요청 timeout 15초, 재시도 1회. `temperature`는 보내지 않는다 (§8).
 - 화면: 10초가 지나면 "직접 입력하기" 버튼을 함께 보여준다 (응답이 오면 그때 채움).
 
 ### 3-2. 시스템 프롬프트 (v1)
@@ -172,7 +175,7 @@ export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string
 2. `colors` 3개, `features`·`private_features` 각 8개로 자른다.
 3. `category`가 `wallet_card.card` 또는 `wallet_card.id`면 `is_sensitive = true`로 강제.
 4. 개인정보 패턴 마스킹 (안전망): 숫자 6자리 이상 연속, 이메일, 전화번호 형식 → `***`.
-5. `ai_raw`에 원본 응답과 `usage` 저장, `ai_latency_ms` 기록.
+5. `ai_raw`에 원본 응답과 `usageMetadata` 저장, `ai_latency_ms` 기록.
 
 ## 4. 분실 설명 정규화
 
@@ -181,7 +184,7 @@ export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string
 - 입력: `설명: {description}` + (있으면) `추가 특징: {secret_detail}` + (있으면) `분실자가 고른 분류: {user_category}`
 - **연락처, 이름은 넣지 않는다.**
 - 출력: `LostReportNormalization`
-- 설정: `output_config.effort: "low"`, `max_tokens: 8000`
+- 설정: 구조화 출력(`responseJsonSchema`), 낮은 `thinkingLevel`
 
 ### 4-2. 시스템 프롬프트 (v1)
 
@@ -205,7 +208,7 @@ export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string
 
 ### 4-3. 실패 처리
 
-정규화가 실패하면 `ai_status = 'failed'`, `category = user_category`, `search_text = description` 원문으로 임베딩하고 매칭을 계속한다.
+정규화가 실패하면 `ai_status = 'failed'`, `category = user_category`, `search_text = description` 원문 그대로 AI 유사도 판정(§5-4)에 넣고 매칭을 계속한다.
 
 ### 4-4. 분실자가 올린 사진 (선택)
 
@@ -224,21 +227,21 @@ export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string
 
 ```
 신호별 가중치 (합 1.0)
-  벡터    0.42    (= 0.60 × 0.70)          항상 있음
+  AI 특징 유사도  0.42  (= 0.60 × 0.70)   항상 있음 (§5-4 판정값)
   분류    0.09    (= 0.60 × 0.30 × 0.5)
   색상    0.054   (= 0.60 × 0.30 × 0.3)
   브랜드  0.036   (= 0.60 × 0.30 × 0.2)
   장소    0.25
   날짜    0.15                              항상 있음
 
-벡터 = clamp((cos − 0.30) / (0.80 − 0.30), 0, 1)        # cos: 임베딩 코사인 유사도
+AI 특징 유사도 = Gemini 판정값 (0, 0.25, 0.5, 0.75, 1 중 하나, §5-4)
 
 알 수 있는 신호 K = 양쪽 값이 모두 있는 신호 ("모름"은 빠짐)
 정보 충족도 coverage = Σ(i∈K) w_i                       # 0.57 ~ 1.0
 최종 점수 score      = Σ(i∈K) w_i × s_i / coverage       # 모르는 신호는 0점이 아니라 계산에서 빠짐
 ```
 
-모든 신호가 있으면 이전 공식(0.60 × 특징 + 0.25 × 장소 + 0.15 × 날짜, 특징 = 0.70 × 벡터 + 0.30 × 속성)과 같다.
+모든 신호가 있으면 이전 공식(0.60 × 특징 + 0.25 × 장소 + 0.15 × 날짜, 특징 = 0.70 × AI 특징 유사도 + 0.30 × 속성)과 같다.
 
 **일치도와 정보 충족도는 따로 본다.** 장소만 맞았다고 주인일 가능성이 높은 게 아니다. coverage가 낮으면 후보로는 보여주되 "정보가 적어요"를 붙이고 알림은 보내지 않는다.
 
@@ -258,7 +261,7 @@ export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string
 
 **예시** (모든 신호가 있을 때, coverage 1.0): 특징 0.92, 장소 1.0, 날짜 0.8 → 0.6×0.92 + 0.25×1.0 + 0.15×0.8 = **0.922**
 
-**예시 2** (구역·브랜드를 모를 때): 벡터 0.9, 분류 1.0, 색상 1.0, 날짜 1.0 → coverage = 0.42+0.09+0.054+0.15 = 0.714, score = (0.42×0.9 + 0.09 + 0.054 + 0.15) / 0.714 ≈ **0.941**. coverage 0.714는 "정보가 적어요" 기준(0.65)보다 높아서 알림 대상이 된다. 색상까지 모르면 coverage 0.66으로 기준에 겨우 걸치고, 분류도 "기타"면 0.57이라 "정보가 적어요"가 붙고 알림을 보내지 않는다.
+**예시 2** (구역·브랜드를 모를 때): AI 특징 유사도 0.75, 분류 1.0, 색상 1.0, 날짜 1.0 → coverage = 0.42+0.09+0.054+0.15 = 0.714, score = (0.42×0.75 + 0.09 + 0.054 + 0.15) / 0.714 ≈ **0.853**. coverage 0.714는 "정보가 적어요" 기준(0.65)보다 높아서 알림 대상이 된다. 색상까지 모르면 coverage 0.66으로 기준에 겨우 걸치고, 분류도 "기타"면 0.57이라 "정보가 적어요"가 붙고 알림을 보내지 않는다.
 
 ### 5-2. 임계값
 
@@ -268,13 +271,13 @@ export function buildSearchText(d: ItemDescriptor, extra: string[] = []): string
 | `MATCH_NOTIFY_THRESHOLD` | 0.70 | 이 점수 이상 새 후보가 생기면 이메일. 화면 라벨 "유사도 높음" |
 | `COVERAGE_MIN_NOTIFY` | 0.65 | 이 충족도 미만이면 알림을 보내지 않고 "정보가 적어요"를 표시한다 |
 | `TIE_GAP` | 0.05 | 상위 후보끼리 이 차이 안이면 비슷한 물건 여러 개로 본다 |
-| `COS_LOW`, `COS_HIGH` | 0.30, 0.80 | 코사인 보정 구간. 임베딩 모델을 바꾸면 반드시 다시 잡는다 |
+| `AI_JUDGE_BATCH`, `AI_JUDGE_MAX_CANDIDATES` | 20, 60 | 한 번에 판정할 후보 수, 신고 1건당 최대 후보 수. 60개를 자주 넘으면 Stage 2 신호 (§10) |
 
 ### 5-3. 함수 형태
 
 ```ts
 export type ScoreInput = {
-  vecSim: number;
+  aiSimilarity: number;  // §5-4 판정값 (0, 0.25, 0.5, 0.75, 1)
   a: { category: string; colors: string[]; brand: string | null; confidence: number | null };
   b: { category: string; colors: string[]; brand: string | null; confidence: number | null };
   area: { report: string | null; item: string | null };
@@ -282,20 +285,64 @@ export type ScoreInput = {
 };
 export type ScoreResult =
   | { excluded: true; reason: 'category_mismatch' | 'date_before_loss' }
-  | { excluded: false; score: number; coverage: number; breakdown: { vec: number; category: number | null; color: number | null; brand: number | null; place: number | null; date: number; known: string[] } };
+  | { excluded: false; score: number; coverage: number; breakdown: { ai: number; category: number | null; color: number | null; brand: number | null; place: number | null; date: number; known: string[] } };
 
 export function scoreCandidate(input: ScoreInput, cfg = DEFAULT_CONFIG): ScoreResult;
 ```
 
 순수 함수다. DB·네트워크에 접근하지 않는다. 단위 테스트로 §5-1의 표 모든 칸, 예시 1(0.922)과 예시 2, 모르는 신호가 빠질 때의 coverage, 시간대 보정을 검증한다. `tie`는 후보 목록 단위로 `run.ts`에서 정한다.
 
+### 5-4. AI 유사도 판정 (Stage 1)
+
+임베딩 대신 파운데이션 모델이 후보를 직접 비교한다. 먼저 SQL로 후보를 줄여 한 번에 비교할 양을 작게 유지한다.
+
+1. **후보 추리기** (`candidate_items_for_report`, 역방향 `candidate_reports_for_item`, `04-architecture.md` §4-3): 같은 시설, 날짜 창(`lost_from−1` ~ `lost_to+14`), 대분류가 같거나 한쪽이 모름·확신도 낮음. 날짜가 가까운 순으로 최대 60개.
+2. **판정**: 20개씩 묶어 Gemini에 보낸다 (최대 3번, 병렬). 입력은 기준 쪽(신고 또는 습득물)의 `buildSearchText`와 원문, 후보마다 짧은 번호(C1, C2 …)와 `buildSearchText`. 습득물의 비공개 특징도 넣는다 (서버 안에서만 쓴다). **연락처는 넣지 않는다.**
+3. **출력** (`lib/validation/ai.ts`):
+
+```ts
+export const SimilarityJudgement = z.object({
+  results: z.array(z.object({
+    id: z.string(),                 // C1, C2 … (코드에서 실제 id로 바꾼다)
+    similarity: z.number(),         // 0, 0.25, 0.5, 0.75, 1 중 하나 (후처리에서 가장 가까운 값으로 맞춤)
+    matched: z.array(z.string()),   // 맞는 특징 (관리자 전용)
+    conflicts: z.array(z.string()), // 서로 다른 특징 (관리자 전용)
+  })),
+});
+```
+
+4. **점수**: `similarity`가 §5-1의 "AI 특징 유사도"가 된다. 분류·색상·브랜드·장소·날짜는 지금처럼 코드 규칙으로 계산한다. `matched`, `conflicts`는 `breakdown`에 저장해 A-05·A-06에서 관리자에게 "왜 비슷한지"로 보여준다. 분실자에게는 보내지 않는다.
+
+시스템 프롬프트 (v1)
+
+```text
+너는 분실물 보관소의 매칭 도우미야. 기준 물건 하나와 후보 물건 목록을 비교해서, 같은 물건일 가능성을 후보마다 매겨.
+
+척도 (이 다섯 값만 쓴다)
+- 1    : 고유한 특징(스티커, 키링, 각인, 흠집, 안에 든 것)까지 맞고 서로 다른 점이 없다
+- 0.75 : 종류·색·브랜드 같은 주요 특징이 맞고 서로 다른 점이 없다
+- 0.5  : 종류는 같고 일부만 맞거나, 비교할 정보가 적다
+- 0.25 : 종류만 비슷하고 특징은 거의 맞지 않는다
+- 0    : 분명히 다른 물건이다 (서로 다른 특징이 있다)
+
+규칙
+1. 주어진 정보만 비교한다. 없는 정보는 추측하지 않고, 정보가 없다는 이유로 점수를 깎지도 않는다.
+2. 표현이 달라도 뜻이 같으면 같은 특징이다. 예) "곤색" = "남색", "에어팟" = "Apple 무선 이어폰"
+3. 후보끼리 비교하지 말고, 각 후보를 기준 물건과만 비교한다.
+4. matched와 conflicts에는 근거가 된 특징만 짧게 적는다. 이름·번호 같은 개인정보는 쓰지 않는다.
+5. 목록의 모든 후보에 대해 결과를 하나씩 낸다.
+```
+
+- `temperature`를 쓸 수 없으므로(§8) 척도를 다섯 값으로 고정해 흔들림을 줄이고, 같은 입력을 두 번 판정했을 때 값이 바뀌는지 §7에서 잰다.
+- 판정이 실패한 묶음은 `similarity = 0.5`(중립)로 두고 실패를 기록한다. 규칙 점수로 후보를 저장하되 알림은 보내지 않는다.
+
 ## 6. 실행 계기와 저장 규칙
 
 | 계기 | 실행 | 비고 |
 |---|---|---|
-| 신고 저장 | 정규화 → 임베딩 → `match_items_for_report` → 점수 → 저장 → 알림 | `after()` |
-| 습득물 저장 | 임베딩 → `match_reports_for_item` → 점수 → 저장 → 알림 | `after()` |
-| 습득물 수정 (분류·색상·브랜드·특징) | 재임베딩 → 역방향 매칭 | 기존 `suggested` 후보는 점수만 갱신 |
+| 신고 저장 | 정규화 → `candidate_items_for_report` → AI 유사도 판정 → 점수 → 저장 → 알림 | `after()` |
+| 습득물 저장 | `candidate_reports_for_item` → AI 유사도 판정 → 점수 → 저장 → 알림 | `after()` |
+| 습득물 수정 (분류·색상·브랜드·특징) | 역방향 매칭 다시 실행 | 기존 `suggested` 후보는 점수만 갱신 |
 | 관리자 "다시 분석" | `ai_status = failed`인 것 재처리 | |
 
 저장 규칙
@@ -305,6 +352,7 @@ export function scoreCandidate(input: ScoreInput, cfg = DEFAULT_CONFIG): ScoreRe
 - 신고당 `suggested` 후보는 점수 상위 5개만 유지한다.
 - 새로 0.70을 넘고 coverage가 0.65 이상인 후보만 알림 대상이다 (`notified_at is null`).
 - 같은 `contact_key`의 다른 신고가 같은 습득물로 이미 알림을 받았으면 다시 보내지 않는다 (`02-user-flows.md` §7-1).
+- 여러 시설에 한 번에 신고하면(P1) 시설마다 신고가 따로 있으므로 매칭도 시설마다 따로 한다. 다른 시설의 습득물과는 비교하지 않는다.
 
 ## 7. 평가
 
@@ -319,6 +367,7 @@ export function scoreCandidate(input: ScoreInput, cfg = DEFAULT_CONFIG): ScoreRe
 7. 분실 날짜·구역은 실제 사람처럼 가끔 하루 틀리거나 "잘 모르겠어요"로 둔다.
 8. 정답 표: 습득물마다 실제 분류와 색상을 사람이 적는다 (추출 정확도 측정용).
 9. **기억이 흐린 신고 10건**: 분류·구역·날짜만 넣고 설명은 비운 신고. coverage가 낮게 나와야 하고, 정답이 후보 안에 있는지 따로 잰다.
+10. **판정 안정성**: 같은 신고를 두 번 판정해 유사도 값이 바뀐 후보의 비율을 잰다.
 
 ### 7-2. 파일 형식 (`eval/cases.json`)
 
@@ -371,6 +420,7 @@ export function scoreCandidate(input: ScoreInput, cfg = DEFAULT_CONFIG): ScoreRe
 | Top-1 정확도 | 정답이 1위인 신고 비율 | 참고 |
 | **Top-3 재현율** | 정답이 3위 안에 있는 신고 비율 (정답 있는 신고만) | 90% 이상 |
 | 흐린 신고 Top-3 재현율 | 정보가 적은 신고 중 정답이 3위 안에 있는 비율 | 70% 이상 |
+| 판정 안정성 | 같은 입력을 두 번 판정했을 때 값이 같은 후보 비율 | 90% 이상 |
 | MRR | 정답 순위 역수의 평균 | 참고 |
 | **오알림률** | 미끼 신고 중 0.70 이상 후보가 생긴 비율 | 10% 이하 |
 | 잘못된 1위 알림 | 정답 있는 신고에서 1위가 오답인데 0.70 이상인 비율 | 낮을수록 좋음 |
@@ -386,17 +436,20 @@ export function scoreCandidate(input: ScoreInput, cfg = DEFAULT_CONFIG): ScoreRe
 - 발표에는 `test` 결과를 쓴다.
 - 표본이 작으므로 숫자와 함께 표본 수를 반드시 적는다: "Top-3 재현율 93% (test 신고 15건, 2026-11-27 팀 자체 평가)".
 
-## 8. Claude API 호출 규칙
+## 8. Gemini API 호출 규칙
 
-- 공식 SDK `@anthropic-ai/sdk`. 클라이언트는 `lib/ai/client.ts`에 하나만 만든다.
-- 구조화 출력은 **structured outputs** (`client.messages.parse()` + zod, 또는 `output_config.format`). 정확한 헬퍼 이름은 구현 시 SDK 문서로 확인한다.
-- `claude-opus-5-5`는 강제 `tool_choice`(`any`, `tool`)에 400을 낸다. JSON을 받으려고 tool을 강제하지 않는다.
-- `temperature`, `top_p`, `top_k`는 보내지 않는다 (400).
-- `claude-opus-5-5`는 thinking을 끌 수 없다. 대신 `output_config.effort`로 조절한다 (추출은 `low`부터).
-- `stop_reason`을 먼저 확인한다: `refusal`이면 실패 처리, `max_tokens`면 1회 재시도.
-- 서버 측 fallback을 켠다: beta `server-side-fallback-2026-07-01` + `fallbacks: "default"`.
-- 매 호출마다 `{ kind, model, latency_ms, usage, stop_reason }`을 로그로 남긴다.
-- 모델 변경(예: 더 빠른 모델)은 비용·속도·정확도를 §7 평가로 비교한 뒤 ADR로 결정한다 (ADR-009).
+확인일 2026-11-25 (Google AI for Developers 문서). 모델과 SDK는 자주 바뀌니 구현 전에 문서를 다시 확인한다.
+
+- SDK: `@google/genai` (`import { GoogleGenAI } from "@google/genai"`). 예전 패키지 `@google/generative-ai`는 쓰지 않는다. 클라이언트는 `lib/ai/client.ts`에 하나, 키는 `GEMINI_API_KEY`.
+- 호출: `ai.models.generateContent({ model, contents, config })`. 이미지는 `{ inlineData: { mimeType: "image/jpeg", data: base64 } }` 파트로 넣는다 (요청 전체 20MB 미만).
+- 구조화 출력: `config: { responseMimeType: "application/json", responseJsonSchema: z.toJSONSchema(Schema) }`. 받은 JSON은 다시 zod로 검증한다.
+- `temperature`, `topP`, `topK`는 보내지 않는다. Gemini 4와 3.6 이상은 이 값을 무시하고, 앞으로 400 에러를 낼 예정이다.
+- 생각 깊이: `thinkingConfig.thinkingLevel`. 추출·판정은 낮은 단계부터 시작해 평가로 올린다 (값 이름은 SDK 문서 확인).
+- 응답이 비었거나 정상 종료가 아니면(`finishReason`이 `STOP`이 아님, 차단 등) 실패로 보고 1회 재시도한다. 그래도 실패하면 §3-3, §4-3, §5-4의 실패 처리로 넘어간다.
+- 모델은 환경변수(`VISION_MODEL`, `LLM_MODEL`). 기본은 `gemini-4-hydrogen`(문서 예제의 기본 모델, 무료 등급 있음). 대안은 Stable 표시가 확인된 `gemini-3.8-flash`, 저비용 `gemini-3.5-flash-lite`. `gemini-2.5-flash`는 2026-12-01 종료 예정이라 쓰지 않는다 (ADR-024).
+- 문서는 새 Interactions API를 기본으로 안내하고 `generateContent`를 이전 API로 표시한다. MVP는 단발 호출이라 `generateContent`로 시작하되, 구현할 때 지원 상태를 확인한다 (Q17).
+- **데이터 정책**: 무료 등급 입력은 구글 제품 개선에 쓰이고 사람이 볼 수 있다. 무료 등급 키(`GEMINI_TIER=free`)로는 팀이 만든 테스트 데이터만 보낸다. 실제 분실자 정보·사진은 결제가 연결된 유료 등급 키로만 처리한다 (ADR-025).
+- 매 호출마다 `{ kind, model, latency_ms, usageMetadata, finish_reason }`을 로그로 남긴다. 연락처·토큰은 남기지 않는다.
 
 ## 9. 소유권 확인 보조
 
@@ -420,7 +473,7 @@ export function scoreCandidate(input: ScoreInput, cfg = DEFAULT_CONFIG): ScoreRe
 ### 9-2. 답변 비교 호출
 
 - 입력: 확인 질문과 답변, 신고 원문과 `secret_detail`, 습득물의 분류·공개 설명·`private_features`·습득 구역·날짜. **연락처는 넣지 않는다.**
-- 출력 (structured outputs, `lib/validation/ai.ts`):
+- 출력 (구조화 출력 `responseJsonSchema`, `lib/validation/ai.ts`):
 
 ```ts
 export const OwnershipVerdict = z.object({
@@ -435,7 +488,7 @@ export const OwnershipVerdict = z.object({
 ```
 
 - 분류처럼 이미 공개된 정보는 비교 항목에서 뺀다. 공개 정보가 맞는 건 주인이라는 근거가 되지 않는다.
-- 설정: `output_config.effort: "low"`, 응답 뒤 백그라운드(`after()`). 실패하면 `ai_verdict = null`로 두고 관리자가 직접 비교한다.
+- 설정: 낮은 `thinkingLevel`, 응답 뒤 백그라운드(`after()`). 실패하면 `ai_verdict = null`로 두고 관리자가 직접 비교한다.
 
 ### 9-3. 시스템 프롬프트 (v1)
 
@@ -465,13 +518,17 @@ export const OwnershipVerdict = z.object({
 - 가짜 요청: 다른 팀원이 공개 정보(분류, 공개 설명, 구역)만 보고 남의 물건에 답한다. 비공개 항목에 `match`가 없으면 걸러낸 것. 목표 90% 이상, 10건 이상.
 - 결과는 `pnpm eval` 결과 파일에 함께 남긴다.
 
-## 10. P1 — LLM 재순위
+## 10. 발전 단계 (Stage 1 → 3)
 
-점수 상위 5개 후보를 한 번에 LLM에 보내 "같은 물건일 가능성: 높음/중간/낮음 + 이유 한 줄"을 받는다.
+| 단계 | 언제 | 매칭 방식 | 바뀌는 것 |
+|---|---|---|---|
+| **Stage 1 (MVP)** | 지금 | SQL 후보 추리기(시설·날짜·분류) → Gemini가 후보와 직접 비교(§5-4) → 규칙 점수 | 모델 학습·벡터 DB 없음. 판정 이유(`matched`, `conflicts`)를 관리자에게 보여줄 수 있다 |
+| **Stage 2 (임베딩 검색)** | 후보가 60개를 자주 넘을 때, 의미 검색이나 시설 간 검색이 필요할 때 | `gemini-embedding-2`(768차원, 텍스트·이미지)로 `search_text`와 사진을 벡터로 저장 → pgvector에서 상위 30개 → Stage 1 판정으로 재순위 | `vector(768)` 컬럼 마이그레이션, 기존 데이터 일괄 임베딩. 분실자 여행 사진과 습득물 사진을 이미지끼리 비교할 수 있다 |
+| **Stage 3 (파이프라인)** | 여러 시설과 여러 단계(검색 → 재순위 → 소유권 확인 → 문의 응답)가 붙을 때 | LangChain(JS)이나 LangGraph로 검색·재순위·평가 흐름을 묶는다 | 문의 응답 챗봇, 시설 간 통합 탐색, 평가 자동화. 패키지와 구성은 이때 확인한다 |
 
-- 입력: 신고 descriptor + 원문, 후보별 descriptor + 공개·비공개 특징 (서버 안에서만 사용)
-- 최종 점수 = 0.7 × 규칙 점수 + 0.3 × LLM 라벨 점수 (높음 1.0 / 중간 0.5 / 낮음 0)
-- 오알림률이 목표를 못 맞출 때 도입한다. 비용·지연이 늘어나므로 평가로 효과를 확인한 뒤 켠다.
+- 임베딩은 LangChain 없이 SDK(`ai.models.embedContent`)로 바로 쓸 수 있다. LangChain은 여러 단계를 묶을 때 고려한다.
+- `gemini-embedding-2`는 `taskType`을 받지 않는다. 작업을 텍스트 앞에 적는다 (예: 질의 `task: search result | query: ...`, 문서 `title: ... | text: ...`). 768처럼 줄인 차원도 자동 정규화된다. 텍스트 전용 `gemini-embedding-001`은 2028-05-14 종료 예정이라 새로 쓰지 않는다.
+- Stage 2로 넘어가는 신호: 후보가 60개를 넘는 신고가 10% 이상, 판정 비용·지연이 목표를 넘음, 시설 간 검색 요구.
 
 ## 11. 변경 기록
 
@@ -480,3 +537,4 @@ export const OwnershipVerdict = z.object({
 | 2026-11-25 | v1 초안 (가중치 60/25/15, 임계값 0.45/0.70) | 사업계획서 초기 설계 |
 | 2026-11-25 | §9 소유권 확인 보조 추가 (분류별 고정 질문, 답변 비교, 시도 제한) | 발표·피드백 질문 "진짜 주인인지 어떻게 아나" |
 | 2026-11-25 | §5 동적 가중치와 정보 충족도(coverage), 시간대 보정, tie. §4-4 분실자 사진, §4-5 "모름" 처리 | 기억이 흐린 분실자, 같은 물건 여러 개 대응 (ADR-020) |
+| 2026-11-25 | AI 제공자를 Gemini로 변경. 임베딩 대신 SQL 후보 추리기 + Gemini 유사도 판정(§5-4), "벡터" 신호를 "AI 특징 유사도"로. 발전 단계 §10 | ADR-023, ADR-024 |

@@ -19,7 +19,7 @@ supabase migration new <짧은_영문_이름>
 ## 3. SQL 점검표
 - [ ] 새 테이블에 `facility_id uuid not null references facilities(id)`가 있다
 - [ ] `alter table ... enable row level security;`
-- [ ] 관리자 정책은 `is_facility_member(facility_id)` 패턴
+- [ ] 관리자 정책은 `to authenticated` + `private.is_facility_member(facility_id)` 패턴, `auth.uid()`는 `(select auth.uid())`
 - [ ] anon 정책 없음
 - [ ] 자주 거르는 컬럼(`facility_id`, `status`, 날짜)에 인덱스
 - [ ] 날짜 비교는 `at time zone 'Asia/Seoul'`

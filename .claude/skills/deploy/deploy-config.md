@@ -25,8 +25,8 @@ Phase 1(교내 파일럿)부터 Supabase를 개발용·운영용 두 프로젝�
 |---|---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✓ | ✓ | ✓ |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✓ | ✓ | ✓ |
-| `ANTHROPIC_API_KEY`, `VISION_MODEL`, `LLM_MODEL` | ✓ | ✓ | ✓ |
-| `OPENAI_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_DIM` | ✓ | ✓ | ✓ |
+| `GEMINI_API_KEY`, `GEMINI_TIER`, `VISION_MODEL`, `LLM_MODEL` | ✓ (무료 등급, 테스트 데이터만) | ✓ | ✓ (유료 등급) |
+| (Stage 2) `EMBEDDING_MODEL`, `EMBEDDING_DIM` | — | — | — |
 | `MATCH_SAVE_THRESHOLD`, `MATCH_NOTIFY_THRESHOLD` | ✓ | ✓ | ✓ |
 | `RESEND_API_KEY`, `EMAIL_FROM` | 선택 | ✓ | ✓ |
 | `NEXT_PUBLIC_APP_URL` | localhost | 미리보기 주소 | 프로덕션 주소 |
