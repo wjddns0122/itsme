@@ -1,0 +1,18 @@
+{
+  "app": {
+    "name": "FindLink",
+    "slogan": "잃어버린 물건과 주인을 AI로 다시 연결합니다."
+  },
+  "public": {
+    "home": {
+      "title": "물건을 잃어버리셨나요?",
+      "description": "시설에 있는 QR 코드를 찍으면 앱 설치 없이 분실 신고를 할 수 있어요."
+    }
+  },
+  "admin": {
+    "home": {
+      "title": "FindLink 관리자",
+      "description": "습득물 등록과 관리 화면은 준비 중이에요."
+    }
+  }
+}
