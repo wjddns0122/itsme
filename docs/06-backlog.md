@@ -182,15 +182,15 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 
 ## E2. 분실 신고
 
-### FL-020 · 시설 페이지, 습득자 안내
+### FL-020 · 시설 페이지, 습득자 안내 ✅
 - P0 · 1h · 의존 FL-003
-- 범위: `src/app/(public)/f/[slug]/page.tsx`, `src/app/(public)/f/[slug]/found/page.tsx`
+- 범위: `src/app/(public)/f/[slug]/page.tsx`, `src/app/(public)/f/[slug]/found/page.tsx`, `src/lib/facilities/{get-facility,page-data,load}.ts`, `src/components/public/{public-shell,desk-info,facility-states,remember-facility}.tsx`
 - 수용 기준
-  - [ ] P-02 버튼 2개, 연락처, 운영 시간
-  - [ ] 검색엔진용 메타데이터: 제목 "{시설 이름} 분실물 찾기 | 잇츠미", 설명. `is_listed = false`면 noindex
-  - [ ] P-06 맡기는 곳 안내
-  - [ ] 없는 slug → 에러 문구
-  - [ ] 시설 정보는 service role로 §9-2 허용 필드만 조회
+  - [x] P-02 버튼 2개, 연락처, 운영 시간 (비어 있는 정보는 줄째 숨김)
+  - [x] 검색엔진용 메타데이터: 제목 "{시설 이름} 분실물 찾기 | 잇츠미", 설명. `is_listed = false`면 noindex
+  - [x] P-06 맡기는 곳 안내 (Figma 시안 없음: P-02 부품으로 구성)
+  - [x] 없는 slug → 에러 문구 (형식이 틀린 slug도 같음, noindex)
+  - [x] 시설 정보는 service role로 §9-2 허용 필드만 조회 (`toFacilityPage` 테스트, 화면 HTML에 주소 없음 확인). `use cache` + 태그 `facility:{slug}`, A-08 저장 때 `revalidateTag`
 - 참고: `03-screens.md` P-02, P-06
 
 ### FL-021 · 분실 신고 양식과 저장

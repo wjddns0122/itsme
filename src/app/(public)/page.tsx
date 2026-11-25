@@ -2,9 +2,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { AppIcon } from "@/components/app-icon";
 import { FacilityRow, FacilityRowSkeleton } from "@/components/public/facility-row";
 import { FacilitySearchForm } from "@/components/public/facility-search-form";
+import { PublicShell } from "@/components/public/public-shell";
 import { RecentFacilities } from "@/components/public/recent-facilities";
 import {
   facilitySearchHref,
@@ -22,13 +22,8 @@ const EMPTY_SEARCH: FacilitySearch = { q: "", type: null };
 
 export default function FacilitySearchPage({ searchParams }: PageProps<"/">) {
   return (
-    <main className="mx-auto flex w-full max-w-[480px] flex-1 flex-col bg-canvas">
-      <header className="flex items-center gap-1.5 px-4 py-3">
-        <AppIcon size="sm" />
-        <span className="font-brand text-character text-ink">{ko.app.name}</span>
-      </header>
-
-      <div className="flex flex-1 flex-col gap-3.5 px-4 pt-1 pb-6">
+    <PublicShell footer={t.footer}>
+      <div className="flex flex-col gap-3.5">
         <h1 className="text-question font-bold tracking-[-0.02em] text-ink">{t.title}</h1>
         <p className="text-desc text-ink-muted">{t.description}</p>
 
@@ -36,10 +31,8 @@ export default function FacilitySearchPage({ searchParams }: PageProps<"/">) {
         <Suspense fallback={<SearchArea search={EMPTY_SEARCH} body={<ResultsLoading />} />}>
           <SearchFromParams searchParams={searchParams} />
         </Suspense>
-
-        <p className="mt-auto pt-4 text-center text-caption font-medium text-ink-muted">{t.footer}</p>
       </div>
-    </main>
+    </PublicShell>
   );
 }
 

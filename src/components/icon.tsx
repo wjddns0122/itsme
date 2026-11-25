@@ -32,7 +32,7 @@ export type IconName =
 
 type IconProps = {
   name: IconName;
-  size: 16 | 18 | 20 | 22;
+  size: 16 | 18 | 20 | 22 | 26;
   className?: string;
 };
 
