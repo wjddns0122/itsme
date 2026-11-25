@@ -51,7 +51,7 @@ flowchart LR
 |---|---|---|
 | Next.js 한 앱 | 1인 개발, 배포·인증 공유, Server Action으로 API 코드 최소화 | 분실자용·관리자용 앱 분리 |
 | Supabase | DB·인증·파일 저장·벡터 검색을 한 곳에서. 무료 요금제 | Firebase (벡터 검색 약함), 직접 구축 |
-| pgvector | 습득물 수가 시설당 수천 건 이하. 별도 벡터 DB 불필요 | Pinecone 등 |
+| pgvector | 스키장 기준 하루 최대 100건 × 1년 보관 = 시설당 연 수만 건. HNSW 인덱스로 충분하고 별도 벡터 DB 불필요 | Pinecone 등 |
 | 모델 학습 없음 | 사진 → 구조화 텍스트 → 임베딩 비교로 MVP 충분 | 이미지 임베딩 모델 학습 |
 | `after()` | 큐 없이 백그라운드 처리. MVP 규모에 충분 | 작업 큐 (Inngest, QStash) — Phase 1에서 재검토 |
 
@@ -96,6 +96,8 @@ erDiagram
     lost_reports ||--o{ match_candidates : in
     found_items ||--o{ item_events : logs
     lost_reports ||--o{ item_events : logs
+    facilities ||--o{ inquiries : logs
+    lost_reports ||--o{ inquiries : about
 ```
 
 ### 4-2. 스키마 (마이그레이션 `0001_init.sql` 초안)
@@ -109,8 +111,9 @@ create type facility_type    as enum ('school','ski_resort','hotel','festival','
 create type member_role      as enum ('owner','staff');
 create type found_status     as enum ('stored','claimed','returned','transferred','disposed');
 create type report_status    as enum ('open','claimed','resolved','closed');
-create type candidate_status as enum ('suggested','claimed','approved','rejected','dismissed');
+create type candidate_status as enum ('suggested','claimed','needs_proof','approved','rejected','dismissed');
 create type ai_status        as enum ('pending','done','failed','skipped');
+create type inquiry_channel  as enum ('phone','visit','message','other');
 
 -- 시설
 create table facilities (
@@ -124,7 +127,7 @@ create table facilities (
   hours          text,                            -- 운영 시간 안내
   desk_location  text,                            -- 맡기는 곳 안내 (P-06)
   pickup_guide   text,                            -- 수령 안내 문구 (승인 시 표시)
-  transfer_days  int  not null default 7,         -- 보관 기한. 법정 기한 확인 필요 (Q2)
+  transfer_days  int  not null default 30,        -- 보관 기한. 인터뷰: 학교 1~6주, 스키장 1년 → 스키장은 365로 생성. 법정 기한 확인 필요 (Q2, ADR-018)
   created_at     timestamptz not null default now()
 );
 
@@ -151,6 +154,7 @@ create table found_items (
   public_summary      text not null,                -- 분실자에게 보이는 설명
   private_features    text[] not null default '{}', -- 비공개 식별 특징 (소유권 확인용)
   is_sensitive        boolean not null default false,
+  review_needed       boolean not null default false, -- 빠른 등록에서 AI 확신도 낮음·민감 물품 → 확인 필요
   search_text         text,                         -- 임베딩 입력 (코드에서 생성)
   embedding           vector(1536),
 
@@ -171,7 +175,7 @@ create table found_items (
   -- 반환 기록
   returned_at         timestamptz,
   returned_to_name    text,
-  return_method       text,                         -- id_check | qa | receipt | other
+  return_method       text,                         -- id_check | qa | unlock | serial | receipt | other
   return_note         text,
 
   -- 지표
@@ -211,11 +215,15 @@ create table lost_reports (
   lost_from         date not null,
   lost_to           date not null,
   lost_area         text,                          -- null = 잘 모르겠어요
+  lost_time_of_day  text,                          -- morning | lunch | afternoon | evening | null(모름)
+  is_rental         boolean not null default false, -- 빌린 물건 (렌탈 장비)
+  report_photo_paths text[] not null default '{}',  -- 분실자가 올린 물건이 나온 사진 (보조 근거, 종료 30일 후 삭제)
 
   -- 연락처 (LLM에 보내지 않음, 종료 30일 후 삭제)
   contact_name      text,
   contact_email     text,
   contact_phone     text,
+  contact_key       text,                          -- 같은 분 묶기: 전화번호 숫자만 또는 소문자 이메일 (F9-1). 분실자 응답에 절대 포함 금지
   consent_at        timestamptz not null,
 
   access_token      text not null unique,          -- 앱에서 생성: randomBytes(24) base64url
@@ -230,6 +238,7 @@ create table lost_reports (
 );
 create index lost_reports_facility_idx on lost_reports (facility_id, status, created_at desc);
 create index lost_reports_embedding_idx on lost_reports using hnsw (embedding vector_cosine_ops);
+create index lost_reports_contact_idx on lost_reports (facility_id, contact_key) where contact_key is not null;
 
 -- 매칭 후보 (+ 소유권 확인 요청)
 create table match_candidates (
@@ -237,12 +246,18 @@ create table match_candidates (
   facility_id       uuid not null references facilities(id) on delete cascade,  -- RLS 단순화용
   lost_report_id    uuid not null references lost_reports(id) on delete cascade,
   found_item_id     uuid not null references found_items(id) on delete cascade,
-  score             numeric(5,4) not null,
-  breakdown         jsonb not null,     -- {feature, place, date, vec, attr, dismiss_reason?}
+  score             numeric(5,4) not null,             -- 비교한 항목만으로 낸 일치도
+  coverage          numeric(4,3) not null default 1,   -- 정보 충족도: 비교에 쓴 신호의 가중치 합 (05 §5)
+  breakdown         jsonb not null,     -- {feature, place, date, vec, attr, known[], tie?, dismiss_reason?}
   status            candidate_status not null default 'suggested',
 
-  claim_answer      text,
+  claim_answers     jsonb,              -- [{question_id, question, answer}] 분류별 확인 질문 답변
   claim_photo_path  text,
+  claim_attempt     int not null default 0,  -- 같은 신고·습득물 쌍의 요청 횟수 (최대 2)
+  ai_verdict        jsonb,              -- AI 답변 비교 결과 (05-ai-matching.md §9-2). 관리자 전용
+  proof_request     text,               -- 관리자가 요청한 추가 증빙 (분실자에게 보임)
+  proof_reply       text,
+  proof_photo_path  text,
   claimed_at        timestamptz,
   reviewed_by       uuid references auth.users(id),
   reviewed_at       timestamptz,
@@ -258,6 +273,21 @@ create table match_candidates (
 create unique index one_active_claim_per_report
   on match_candidates (lost_report_id) where status = 'claimed';
 
+-- 문의 기록 (반복 문의 줄이기, F9-2)
+create table inquiries (
+  id              uuid primary key default gen_random_uuid(),
+  facility_id     uuid not null references facilities(id) on delete cascade,
+  lost_report_id  uuid references lost_reports(id) on delete set null,
+  channel         inquiry_channel not null default 'phone',
+  contact_key     text,              -- 신고를 연결하지 않았을 때 같은 분을 묶는 키
+  note            text,
+  handled_by      uuid references auth.users(id),
+  created_at      timestamptz not null default now()
+);
+create index inquiries_facility_idx on inquiries (facility_id, created_at desc);
+create index inquiries_report_idx on inquiries (lost_report_id);
+create index inquiries_contact_idx on inquiries (facility_id, contact_key) where contact_key is not null;
+
 -- 처리 이력 (감사 로그)
 create table item_events (
   id              bigint generated always as identity primary key,
@@ -267,7 +297,7 @@ create table item_events (
   actor           uuid references auth.users(id),   -- null = 분실자 또는 시스템
   type            text not null,
   -- registered | ai_extracted | edited | matched | notified | claimed
-  -- | approved | rejected | returned | transferred | disposed | report_created | report_closed
+  -- | approved | rejected | returned | transferred | disposed | report_created | report_closed | inquiry_logged
   payload         jsonb not null default '{}',
   created_at      timestamptz not null default now()
 );
@@ -356,6 +386,7 @@ alter table found_items      enable row level security;
 alter table lost_reports     enable row level security;
 alter table match_candidates enable row level security;
 alter table item_events      enable row level security;
+alter table inquiries        enable row level security;
 
 create policy fac_select   on facilities       for select using (is_facility_member(id));
 create policy fac_update   on facilities       for update using (
@@ -370,6 +401,8 @@ create policy cand_all     on match_candidates for all
   using (is_facility_member(facility_id)) with check (is_facility_member(facility_id));
 create policy events_sel   on item_events      for select using (is_facility_member(facility_id));
 create policy events_ins   on item_events      for insert with check (is_facility_member(facility_id));
+create policy inq_all      on inquiries        for all
+  using (is_facility_member(facility_id)) with check (is_facility_member(facility_id));
 ```
 
 - anon 역할에는 정책이 없다 → 분실자 브라우저는 테이블에 직접 접근할 수 없다.
@@ -382,6 +415,7 @@ create policy events_ins   on item_events      for insert with check (is_facilit
 |---|---|---|---|---|
 | `found-items` | 비공개 | `{facility_id}/{uuid}.jpg` | 서버 (Server Action) | 관리자: 10분 만료 서명 URL |
 | `claim-photos` | 비공개 | `{facility_id}/{candidate_id}/{uuid}.jpg` | 서버 (service role) | 관리자: 10분 만료 서명 URL |
+| `report-photos` | 비공개 | `{facility_id}/{report_id}/{uuid}.jpg` | 서버 (service role) | 관리자: 10분 만료 서명 URL. 종료 30일 후 삭제 |
 
 Storage 정책: `found-items`는 `(storage.foldername(name))[1]::uuid`가 내 시설인 경우만 읽기 허용. 분실자에게는 어떤 사진 URL도 내려보내지 않는다.
 
@@ -395,6 +429,8 @@ Storage 정책: `found-items`는 `(storage.foldername(name))[1]::uuid`가 내 �
 |---|---|---|---|
 | `analyzePhoto` | `FormData` (사진 1~3장, 각 5MB 이하) | 업로드와 AI 분석을 `Promise.all`로 동시 실행. AI 실패 시 `extraction: null` | `{ photoPaths, extraction, aiLatencyMs }` |
 | `createFoundItem` | 양식 값 + `photoPaths` + `extraction` 원본 + `registerStartedAt` | 저장, `transfer_due_at` 계산, 이벤트 `registered`. `after()`로 임베딩 → 역방향 매칭 | `{ id }` |
+| `quickCreateFoundItem` | 사진 + 보관 위치 + `registerStartedAt` | 바로 저장(`ai_status = pending`). `after()`로 AI 분석 → 필드 채움 → 확신도 0.6 미만이나 민감 물품이면 `review_needed = true` → 임베딩 → 매칭 | `{ id }` |
+| `createSensitiveItem` | 분류 + 사진 + 보관 위치 | AI 분석 없이 저장 (`ai_status = skipped`, `is_sensitive = true`). 사진은 외부 AI로 보내지 않는다 | `{ id }` |
 | `updateFoundItem` | `id` + 바뀐 필드 | 특징 관련 필드가 바뀌면 `after()`로 재임베딩·재매칭. 이벤트 `edited` | `{ id }` |
 | `setFoundItemStatus` | `id`, `transferred` \| `disposed`, 메모 | 상태 변경, 관련 후보 `dismissed`, 이벤트 | `{ id }` |
 | `markReturned` | `id`, `candidateId?`, 수령인, 확인 방법, 메모 | 습득물 `returned`, 후보 `approved` 유지, 신고 `resolved`, 같은 습득물의 다른 후보 `dismissed (item_returned)`, 이벤트 `returned` — 한 트랜잭션 (RPC) | `{ id }` |
@@ -405,18 +441,20 @@ Storage 정책: `found-items`는 `(storage.foldername(name))[1]::uuid`가 내 �
 
 | 함수 | 사용자 | 처리 | 출력 |
 |---|---|---|---|
-| `createLostReport` | 분실자 (비로그인) | slug로 시설 확인, 토큰 생성, 저장, 이벤트. `after()`로 정규화 → 임베딩 → 매칭 → 이메일 | `{ token }` |
+| `createLostReport` | 분실자 (비로그인) | slug로 시설 확인, 토큰 생성, `contact_key` 계산, 저장, 이벤트. `after()`로 정규화(사진이 있으면 특징 추출 후 합침) → 임베딩 → 매칭 → 이메일 | `{ token }` |
 | `createReportByAdmin` | 관리자 | `created_via = 'admin'`, 이후 같음 | `{ token }` |
 | `getReportView` | 분실자 | 토큰으로 조회. **공개 필드만** 골라 반환 (§9-2) | 신고 요약 + 후보 공개 정보 |
 | `cancelReport` | 분실자 | `closed`, 후보 `dismissed (report_closed)` | `{ ok }` |
+| `updateLostReport` | 분실자 | 토큰 확인 후 설명·색상·브랜드·시간대·사진 보완 → 다시 정규화·매칭 | `{ ok }` |
 
 ### 6-3. 후보·소유권 확인 (`candidates.ts`)
 
 | 함수 | 사용자 | 처리 |
 |---|---|---|
 | `dismissCandidate` | 분실자 | 토큰 소유 확인 후 `dismissed (user)` |
-| `submitClaim` | 분실자 | 토큰 소유 확인, 진행 중 요청 없음 확인, 답변·사진 저장, 후보 `claimed`, 습득물 `claimed`, 신고 `claimed` |
-| `reviewClaim` | 관리자 | `approve`: 후보 `approved`, 수령 안내 저장·이메일. `reject`: 후보 `rejected`, 습득물에 다른 `claimed` 후보가 없으면 `stored`, 신고 `open` |
+| `submitClaim` | 분실자 | 토큰 소유 확인, 진행 중 요청 없음·시도 2회 미만 확인, 분류별 질문 답변·사진 저장, 후보 `claimed`, 습득물 `claimed`, 신고 `claimed`. `after()`로 AI 답변 비교 → `ai_verdict` 저장 |
+| `reviewClaim` | 관리자 | `approve`: 후보 `approved`, 수령 안내(필수 증빙 포함) 저장·이메일. `request_proof`: 후보 `needs_proof`, `proof_request` 저장, 분실자 이메일. `hold`: 상태 유지, 내부 메모. `reject`: 후보 `rejected`, 습득물에 다른 `claimed` 후보가 없으면 `stored`, 신고 `open` |
+| `submitProof` | 분실자 | 토큰 소유 확인, 후보가 `needs_proof`일 때만 답변·사진 저장 → `claimed`로 복귀, AI 비교 다시 실행 |
 
 ### 6-4. Route Handlers
 
@@ -424,6 +462,16 @@ Storage 정책: `found-items`는 `(storage.foldername(name))[1]::uuid`가 내 �
 |---|---|
 | `GET /api/qr/[slug]` | QR PNG 생성 (`qrcode` 패키지) |
 | `GET /api/cron/cleanup` | (P1) 종료 30일 지난 신고의 연락처 삭제. Vercel Cron |
+
+### 6-5. 문의 (`inquiries.ts`, 관리자)
+
+| 함수 | 입력 | 처리 | 출력 |
+|---|---|---|---|
+| `findReportsByContact` | 전화번호 뒷자리 4개 또는 이메일 | 같은 시설 신고를 연락처로 검색, 같은 `contact_key`끼리 묶어 반환 | 신고 묶음 목록 |
+| `logInquiry` | `channel`, `lostReportId?`, `contact?`, `note?` | 문의 기록 저장 (`handled_by` = 로그인 사용자), 이벤트 `inquiry_logged` | `{ id }` |
+| `listInquiries` | `lostReportId` 또는 `contactKey` | 시간순 문의 기록 | 문의 목록 |
+
+`contact_key` 만드는 규칙 (`lib/validation/contact.ts`의 `toContactKey`): 전화번호는 숫자만 남기고 앞의 `82`를 `0`으로, 이메일은 앞뒤 공백을 빼고 소문자로. 단위 테스트 필수.
 
 ## 7. 백그라운드 작업
 
@@ -452,6 +500,7 @@ return { ok: true, data: { token: report.access_token } };
 | 새 확인 요청 | 시설 관리자 | [잇츠미] 새 확인 요청 1건 (P1) |
 
 - 신고 1건당 후보 알림은 24시간에 최대 3통 (`notified_at`으로 계산).
+- 같은 `contact_key`의 여러 신고가 같은 습득물과 매칭되면 알림은 1통만 보낸다.
 - 이메일 본문에는 공개 설명만 넣는다. 사진·비공개 특징·점수는 넣지 않는다.
 
 ## 9. 보안과 개인정보
@@ -463,20 +512,23 @@ return { ok: true, data: { token: report.access_token } };
 - [ ] 사진은 비공개 버킷 + 서명 URL (10분)
 - [ ] 업로드 검증: 이미지 MIME만, 장당 5MB 이하, 최대 3장
 - [ ] 분실자 쓰기 요청에 숨은 입력칸(honeypot) 추가. 요청 수 제한은 P1
+- [ ] 소유권 확인 요청 시도 제한: 신고당 동시 1건, 같은 신고·습득물 쌍 2회, 같은 연락처 7일 3건 이상 경고
 - [ ] LLM에 연락처 전송 금지. 사진 속 개인정보는 프롬프트로 마스킹 지시
+- [ ] 민감 물품 버튼으로 등록한 사진은 외부 AI로 보내지 않는다
+- [ ] 분실자가 올린 사진(얼굴이 나올 수 있음)은 비공개 버킷에 두고, 종료 30일 후 삭제
 - [ ] 동의 문구에 수집 항목, 목적, 보관 기간 명시
-- [ ] 종료 30일 후 연락처 삭제 (MVP 수동, P1 크론)
+- [ ] 종료 30일 후 연락처와 `contact_key` 삭제 (MVP 수동, P1 크론). 연결된 문의 기록의 `contact_key`도 함께
 
 ### 9-2. 분실자에게 내려보내도 되는 필드 (허용 목록)
 
 | 테이블 | 허용 필드 |
 |---|---|
-| `lost_reports` | `description`, `lost_from`, `lost_to`, `lost_area`, `status`, `created_at`, `ai_status` |
-| `match_candidates` | `id`, `status`, 유사도 라벨(높음/보통 — 점수 숫자 아님), `pickup_message`(승인 시) |
+| `lost_reports` | `description`, `lost_from`, `lost_to`, `lost_area`, `lost_time_of_day`, `is_rental`, `status`, `created_at`, `ai_status` |
+| `match_candidates` | `id`, `status`, 유사도 라벨(높음/보통 — 점수 숫자 아님), 정보 부족 표시(충족도 숫자 아님), `pickup_message`(승인 시), `proof_request`(추가 증빙 요청 시). **`ai_verdict`, `review_note`는 절대 안 됨** |
 | `found_items` | `category`, `subcategory`, `public_summary`, 습득 날짜(일 단위), `found_area`. **민감 물품이면 `category`만** |
 | `facilities` | `name`, `contact_phone`, `hours`, `desk_location`, `pickup_guide` |
 
-이 목록 밖의 필드를 분실자 응답에 넣는 코드는 리뷰에서 막는다. `getReportView`에 이 목록을 그대로 코드로 둔다.
+이 목록 밖의 필드를 분실자 응답에 넣는 코드는 리뷰에서 막는다. 특히 `contact_key`와 같은 연락처의 다른 신고가 있는지 여부는 절대 넣지 않는다 (F9 개인정보 규칙). `getReportView`에 이 목록을 그대로 코드로 둔다.
 
 ## 10. 관측과 지표 수집
 
@@ -487,6 +539,7 @@ return { ok: true, data: { token: report.access_token } };
 | AI 지연·토큰 사용량 | `found_items.ai_latency_ms`, `ai_raw.usage` / `lost_reports.ai_raw.usage` |
 | 매칭 결과 | `match_candidates.breakdown` |
 | 처리 흐름 | `item_events` |
+| 문의 수, 같은 분 재문의 수 | `inquiries` (날짜별, `contact_key`별) |
 
 서버 로그: AI 호출마다 `{ kind, model, latency_ms, input_tokens, output_tokens, stop_reason }` 한 줄. 연락처·토큰은 로그에 남기지 않는다.
 
@@ -494,5 +547,5 @@ return { ok: true, data: { token: report.access_token } };
 
 - Vercel 프로젝트 1개, `main` 브랜치 자동 배포, PR마다 미리보기 배포.
 - Supabase 프로젝트 1개 (MVP). Phase 1에서 개발/운영 분리.
-- 시드: `pnpm db:seed` — 시설 1개(인덕대 데모), 관리자 계정 1개, 구역 목록.
+- 시드: `pnpm db:seed` — 시설 2개(인덕대 데모 `transfer_days` 30, 스키장 데모 365), 관리자 계정 1개, 구역 목록.
 - 리전: Supabase는 서울(`ap-northeast-2`), Vercel 함수 리전도 서울(`icn1`)로 맞춘다.

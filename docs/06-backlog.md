@@ -22,10 +22,10 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 | 에픽 | 티켓 | 일정 |
 |---|---|---|
 | E0 셋업 | FL-001 ~ FL-006 | Day 1 |
-| E1 습득물 등록·관리 | FL-010 ~ FL-015 | Day 1 (FL-011 스파이크), Day 2 오전 |
-| E2 분실 신고 | FL-020 ~ FL-024 | Day 2 오후 |
+| E1 습득물 등록·관리 | FL-010 ~ FL-016 | Day 1 (FL-011 스파이크), Day 2 오전 |
+| E2 분실 신고·반복 문의 | FL-020 ~ FL-027 | Day 2 오후, Day 3 오전 |
 | E3 매칭 | FL-030 ~ FL-034 | Day 2 저녁 |
-| E4 소유권 확인·반환 | FL-040 ~ FL-043 | Day 3 오전 |
+| E4 소유권 확인·반환 | FL-040 ~ FL-045 | Day 3 오전 |
 | E5 알림 | FL-050 | Day 3 오전 ✂️ |
 | E6 대시보드 | FL-060 ~ FL-061 | Day 3 오전 |
 | E7 시설 설정·QR | FL-070 ~ FL-071 | Day 3 오전 |
@@ -137,6 +137,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] 습득 일시 기본값 지금, 보관 위치 직전 값 기본
   - [ ] 저장: `transfer_due_at` 계산, `register_started_at` 저장, 이벤트 `registered`
   - [ ] [저장하고 계속 등록]
+  - [ ] [민감 물품] 버튼: AI 분석 없이 분류만 골라 저장 (`createSensitiveItem`), 사진을 외부 AI로 보내지 않음
 - 참고: `03-screens.md` A-03, `02-user-flows.md` §2
 
 ### FL-013 · 습득물 목록
@@ -166,6 +167,16 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] "검은 이어폰 은색 키링"으로 시드 데이터의 해당 이어폰이 3위 안
 - 참고: `02-user-flows.md` §7
 
+### FL-016 · 빠른 등록 모드 (연속 촬영) ✂️
+- P0 · 2h · 의존 FL-012, FL-032
+- 범위: A-03 빠른 등록 토글, `quickCreateFoundItem`, A-04 "확인 필요"·"분석 중" 탭
+- 수용 기준
+  - [ ] 사진 → 보관 위치(직전 값) → 저장 → 바로 다음 촬영. 관리자 조작 5초 이내 (직접 측정, AI 대기 제외)
+  - [ ] AI 분석·임베딩·매칭은 백그라운드
+  - [ ] 확신도 0.6 미만이나 민감 물품이면 `review_needed = true` → A-04 "확인 필요" 탭
+  - [ ] AI가 끝나기 전 항목은 목록에 "분석 중" 표시
+- 참고: `02-user-flows.md` §2-1, `04-architecture.md` §6-1
+
 ---
 
 ## E2. 분실 신고
@@ -185,6 +196,8 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - 범위: `src/app/(public)/f/[slug]/report/`, `src/server/actions/reports.ts`(`createLostReport`)
 - 수용 기준
   - [ ] P-03 3단계, 단계 이동 시 값 유지, 진행 표시
+  - [ ] 분류나 설명 중 하나만 있어도 제출. 색상·브랜드·구역·시간대에 "잘 모르겠어요" (`null`로 저장)
+  - [ ] 시간대(오전/점심/오후/저녁/모름), 대여 물품 체크 저장. 대여면 렌탈샵 안내
   - [ ] 검증·에러 문구 (`03-screens.md` P-03)
   - [ ] 토큰 `randomBytes(24)` base64url, honeypot 입력칸
   - [ ] `report_started_at` 저장, 이벤트 `report_created`
@@ -211,6 +224,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] 분석 중이면 5초마다 새로고침
   - [ ] **§9-2 허용 필드만 반환** (테스트로 확인: 응답에 `private_features`, `photo_paths`, `score` 없음)
   - [ ] 민감 물품은 분류만 표시
+  - [ ] 정보 충족도가 낮으면 "정보가 적어요" 안내 + [신고 내용 보완하기] (`updateLostReport` → 다시 매칭)
 - 참고: `03-screens.md` P-04, `04-architecture.md` §9-2
 
 ### FL-024 · 관리자 신고 목록, 대리 신고
@@ -220,6 +234,37 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] 목록: 신고일, 설명 첫 줄, 기간, 상태, 후보 수, 접수 경로
   - [ ] 대리 신고 한 화면 양식, 완료 후 링크 복사
 - 참고: `03-screens.md` A-07
+
+### FL-025 · 같은 연락처 신고 묶기
+- P0 · 1.5h · 의존 FL-021, FL-024
+- 범위: `src/lib/validation/contact.ts`, `createLostReport`·`createReportByAdmin`의 `contact_key` 계산, A-07 묶음 표시, `findReportsByContact`
+- 수용 기준
+  - [ ] `toContactKey()`: 전화번호 숫자만·앞의 82는 0으로, 이메일은 소문자. 단위 테스트
+  - [ ] 같은 전화번호로 신고 2건 → A-07에서 "같은 분 신고 2건" 한 묶음
+  - [ ] 연락처(뒷자리 4개 또는 이메일)로 신고 검색
+  - [ ] 분실자 응답(`getReportView`)에 `contact_key`와 다른 신고 정보가 없다 (테스트)
+  - [ ] 같은 `contact_key`의 신고들에 같은 습득물 알림은 1통만 (FL-050에서 연결)
+- 참고: `01-prd.md` F9, `02-user-flows.md` §7-1, `04-architecture.md` §6-5
+
+### FL-026 · 문의 기록 ✂️
+- P0 · 1.5h · 의존 FL-025
+- 범위: A-10 모달, `logInquiry`, `listInquiries`, A-07 서랍의 문의 타임라인, A-02 [문의 기록] 버튼
+- 수용 기준
+  - [ ] 채널·연결 신고·메모를 남기고, 응대자·시각은 자동
+  - [ ] 신고 서랍에 문의 기록이 시간순으로 보인다
+  - [ ] 신고 없이도 연락처로 기록할 수 있고, 나중에 같은 연락처 신고가 생기면 묶음에 보인다
+  - [ ] 모달 열기부터 저장까지 10초 안 (직접 측정)
+- 참고: `03-screens.md` A-10, `02-user-flows.md` §7
+
+### FL-027 · 내 사진으로 찾기 ✂️
+- P0 · 1.5h · 의존 FL-011, FL-021
+- 범위: P-03 사진 첨부(선택), `report-photos` 버킷, `processReport`의 사진 특징 추출
+- 수용 기준
+  - [ ] 분실자가 물건이 나온 사진 1~3장을 올리면 §4-4 추출 → 정규화 결과와 합쳐 임베딩
+  - [ ] 글과 사진이 다르면 글 우선
+  - [ ] 사진은 비공개, A-06에서 관리자만 보조 근거로 본다
+  - [ ] 글 없이 분류 + 사진만으로도 후보가 나온다 (평가 3건 이상)
+- 참고: `05-ai-matching.md` §4-4, `01-prd.md` F4-7
 
 ---
 
@@ -232,6 +277,8 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] `05-ai-matching.md` §5-3 시그니처
   - [ ] §5-1 표의 모든 칸 테스트, 제외 규칙 테스트
   - [ ] 예시 입력 → 0.922 테스트
+  - [ ] 동적 가중치: 모르는 신호는 빼고 계산, `coverage` 반환. 예시 2 테스트
+  - [ ] 시간대 보정 (잃어버리기 전에 습득 → 날짜 점수 × 0.3)
   - [ ] 설정값(가중치, 임계값, COS 구간)은 인자로 주입 가능
 - 참고: `05-ai-matching.md` §5
 
@@ -242,7 +289,8 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] `matchForReport(reportId)`, `matchForItem(itemId)` — RPC 호출 → 점수 → 저장
   - [ ] §6 저장 규칙 전부 (upsert, `suggested`만 갱신, dismissed 재생성 금지, 상위 5개)
   - [ ] 같은 함수를 두 번 실행해도 결과 동일 (테스트)
-  - [ ] 알림 대상(새로 0.70 이상) 목록 반환
+  - [ ] 알림 대상(새로 0.70 이상, coverage 0.65 이상) 목록 반환, `coverage` 저장
+  - [ ] 상위 후보 점수 차 0.05 이내면 `breakdown.tie = true`
 - 참고: `05-ai-matching.md` §6
 
 ### FL-032 · 백그라운드 연결과 실패 처리
@@ -276,21 +324,24 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 ## E4. 소유권 확인·반환
 
 ### FL-040 · 소유권 확인 요청 (분실자)
-- P0 · 1.5h · 의존 FL-023
-- 범위: `src/app/(public)/r/[token]/claim/[candidateId]/`, `submitClaim`
+- P0 · 2h · 의존 FL-023
+- 범위: `src/app/(public)/r/[token]/claim/[candidateId]/`, `submitClaim`, `src/lib/validation/claim-questions.ts`
 - 수용 기준
-  - [ ] P-05 질문 필수, 사진 첨부 선택 (`claim-photos` 버킷)
-  - [ ] 진행 중 요청이 있으면 거부 + 안내 문구
+  - [ ] 분류별 확인 질문 2~3개 (`05-ai-matching.md` §9-1), 주관식, 1개 이상 필수, 사진 첨부 선택 (`claim-photos` 버킷)
+  - [ ] 같은 분류의 두 습득물에 같은 질문이 나간다 (테스트)
+  - [ ] 진행 중 요청이 있거나 같은 쌍을 이미 2번 요청했으면 거부 + 안내 문구
   - [ ] 후보·습득물·신고 상태 `claimed`, 이벤트 `claimed`
+  - [ ] 고가품 분류면 "받으러 오실 때 잠금 해제나 일련번호 확인이 필요해요" 안내
 - 참고: `03-screens.md` P-05, `02-user-flows.md` §5
 
 ### FL-041 · 소유권 검토 (관리자) ★
 - P0 · 2h · 의존 FL-040
 - 범위: `src/app/admin/claims/`, `reviewClaim`
 - 수용 기준
-  - [ ] 목록 + 2열 비교 상세 (`03-screens.md` A-06)
+  - [ ] 목록 + 3단 비교 상세 (분실자 답변 / AI 비교 / 보관 중인 물건, `03-screens.md` A-06)
   - [ ] 같은 습득물의 다른 요청 경고
-  - [ ] 승인: 수령 안내 입력, 후보 `approved` / 거절: 내부 메모, 상태 복귀 (§9 다이어그램대로)
+  - [ ] 승인: 수령 안내 입력(고가품·지갑·신분증은 필수 증빙 자동 표시), 후보 `approved` / 거절: 내부 메모, 상태 복귀 (§9 다이어그램대로)
+  - [ ] 같은 연락처의 최근 확인 요청 경고 (`05-ai-matching.md` §9-4)
   - [ ] 거절 사유가 분실자 화면에 노출되지 않음
 - 참고: `02-user-flows.md` §6
 
@@ -308,6 +359,25 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - 수용 기준
   - [ ] 확인 대화상자, 상태 변경, 관련 후보 `dismissed`, 이벤트
 - 참고: `04-architecture.md` §6-1 `setFoundItemStatus`
+
+### FL-044 · AI 답변 비교 (소유권 확인 보조) ✂️
+- P0 · 2h · 의존 FL-040, FL-005
+- 범위: `src/lib/ai/verify.ts`, `src/lib/validation/ai.ts`(`OwnershipVerdict`), `submitClaim`의 `after()`
+- 수용 기준
+  - [ ] `05-ai-matching.md` §9-2 입력·출력, §9-3 프롬프트. 연락처가 입력에 없다는 테스트
+  - [ ] 결과를 `ai_verdict`에 저장, 실패하면 null (관리자가 직접 비교)
+  - [ ] `getReportView`와 이메일에 `ai_verdict`가 없다 (테스트)
+  - [ ] 평가셋의 진짜 주인·가짜 요청으로 §9-5 지표 산출 (FL-081에 포함)
+- 참고: `05-ai-matching.md` §9
+
+### FL-045 · 추가 증빙 요청과 보류
+- P0 · 1.5h · 의존 FL-041
+- 범위: `reviewClaim`(`request_proof`, `hold`), `submitProof`, P-04 추가 증빙 상태, A-06 버튼
+- 수용 기준
+  - [ ] 관리자가 요청 내용을 적으면 후보 `needs_proof`, 분실자 신고 링크에 요청이 보인다
+  - [ ] 분실자가 답·사진을 보내면 `claimed`로 돌아와 검토 대기에 다시 뜬다
+  - [ ] 보류는 상태를 바꾸지 않고 내부 메모만 남긴다
+- 참고: `02-user-flows.md` §6, §9-3
 
 ---
 
@@ -330,7 +400,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 ### FL-060 · KPI와 할 일
 - P0 · 1h · 의존 FL-042
 - 수용 기준
-  - [ ] KPI 4개 (`01-prd.md` F8-1, 반환율 정의대로)
+  - [ ] KPI 5개 (`01-prd.md` F8-1, 반환율 정의대로. 이번 주 문의 수는 FL-026 이후)
   - [ ] 할 일: 확인 요청 대기, 이관 기한 3일 이내
   - [ ] [+ 습득물 등록] 버튼 (모바일 하단 고정)
 - 참고: `03-screens.md` A-02
@@ -349,6 +419,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - 수용 기준
   - [ ] 시설 정보·구역 목록·보관 기한 수정 (owner만)
   - [ ] QR 미리보기 + PNG 내려받기 (주소 `NEXT_PUBLIC_APP_URL/f/{slug}`)
+  - [ ] 홈페이지 메뉴·예약 문자·전화 응대용 링크와 안내 문구 [복사] (`01-prd.md` F1-5)
 - 참고: `03-screens.md` A-08
 
 ### FL-071 · QR 포스터 PDF ✂️
@@ -364,7 +435,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - 범위: `eval/cases.json`, `eval/photos/`, `eval/README.md`
 - 수용 기준
   - [ ] `05-ai-matching.md` §7-1 수집 절차를 팀원용으로 한 장 정리
-  - [ ] 습득물 30개 이상, 미끼 신고 10건, 비슷한 물건 묶음 4개 이상
+  - [ ] 습득물 30개 이상, 미끼 신고 10건, 비슷한 물건 묶음 4개 이상, 중복 신고 3쌍, 진짜 주인 확인 답변과 가짜 확인 요청 각 10건 이상, 기억이 흐린 신고 10건
   - [ ] `split` dev/test 반반
 - 참고: `05-ai-matching.md` §7-1, §7-2
 
@@ -381,6 +452,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - P0 · 1h · 의존 FL-012, FL-021
 - 수용 기준
   - [ ] 등록·신고 소요시간 중앙값·p90을 뽑는 SQL (`scripts/metrics.sql`)
+  - [ ] 하루 문의 수, 같은 분 재문의 수 SQL (`inquiries`)
   - [ ] 사용성 테스트 결과를 같은 형식으로 기록하는 표 (`eval/usability.md`)
 - 참고: `01-prd.md` §7, `04-architecture.md` §10
 
@@ -391,12 +463,16 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 | ID | 내용 | 참고 |
 |---|---|---|
 | FL-090 | 다국어 신고 (EN/JA/ZH): `messages/*.json`, 언어 선택 | PRD §4 P1 |
-| FL-091 | LLM 재순위 | `05-ai-matching.md` §9 |
+| FL-091 | LLM 재순위 | `05-ai-matching.md` §10 |
 | FL-092 | 같은 지역 여러 시설 통합 매칭 | ADR-010 |
-| FL-093 | 이관 기한 알림 (이메일) | PRD F9 |
+| FL-093 | 이관 기한 알림 (이메일) | PRD §4 P1 |
 | FL-094 | 종료 30일 후 연락처 자동 삭제 (Vercel Cron) | `04-architecture.md` §6-4 |
 | FL-095 | 분실자 요청 수 제한 | `04-architecture.md` §9-1 |
 | FL-096 | 신고 링크 이메일 재발송 | `02-user-flows.md` §10 |
-| FL-097 | 택배 반환 안내·기록 (관광객용) | `00-plan.md` §7 Phase 2 |
+| FL-097 | 반환 방법: 수령 예약, 대리 수령, 착불 택배, 이관 안내 (P-07) | PRD F10 |
 | FL-098 | Playwright E2E: 등록 → 신고 → 확인 요청 → 반환 | `CLAUDE.md` §3 |
 | FL-099 | 관리자 초대·회원가입 | Q7 |
+| FL-100 | 설명이 비슷한 중복 신고 감지 (연락처가 달라도) | PRD F9-3 |
+| FL-101 | 문의 통계 (요일·시간대·채널별) | PRD §4 P1 |
+| FL-102 | 확인 요청 전 연락처 인증 (이메일 코드) | PRD §4 P1 |
+| FL-103 | AI 상황 기반 추가 질문 (신고 뒤 빈 항목을 채우도록 묻기) | PRD §4 P1 |
