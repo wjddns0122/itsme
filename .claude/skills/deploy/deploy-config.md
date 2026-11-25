@@ -26,6 +26,7 @@ Phase 1(교내 파일럿)부터 Supabase를 개발용·운영용 두 프로젝�
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✓ | ✓ | ✓ |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✓ | ✓ | ✓ |
 | `GEMINI_API_KEY`, `GEMINI_TIER`, `VISION_MODEL`, `LLM_MODEL` | ✓ (무료 등급, 테스트 데이터만) | ✓ | ✓ (유료 등급) |
+| `GEMINI_FREE_DEMO_UNTIL` | — | — | 해커톤 시연 기간만 (`2026-11-26`, ADR-025 예외). 유료 키가 생기면 지운다 |
 | (Stage 2) `EMBEDDING_MODEL`, `EMBEDDING_DIM` | — | — | — |
 | `MATCH_SAVE_THRESHOLD`, `MATCH_NOTIFY_THRESHOLD` | ✓ | ✓ | ✓ |
 | `RESEND_API_KEY`, `EMAIL_FROM` | 선택 | ✓ | ✓ |
