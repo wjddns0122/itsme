@@ -11,6 +11,9 @@ import { BUCKETS, claimPhotoPath } from "@/lib/storage-paths";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ClaimAnswersSchema, ProofReplySchema } from "@/lib/validation/claim";
 import { MAX_PHOTO_BYTES } from "@/lib/validation/item";
+import { ReportUpdateSchema, type ReportUpdateInput } from "@/lib/validation/report";
+import { after } from "next/server";
+import { processReport } from "@/lib/matching/process";
 import ko from "../../../messages/ko.json";
 import type { ActionResult } from "./result";
 
@@ -136,6 +139,33 @@ export async function submitProof(token: string, candidateId: string, _prev: Pro
   }
   refresh();
   return null;
+}
+
+/**
+ * P-04 [신고 내용 보완하기] (FL-023): while the report is still open, the person may add details.
+ * The report goes back to "찾는 중", then normalization and matching run again; candidates the
+ * person hid stay hidden (plan.ts never recreates dismissed pairs).
+ */
+export async function updateLostReport(token: string, input: ReportUpdateInput): Promise<ActionResult<null>> {
+  const parsed = ReportUpdateSchema.safeParse(input);
+  if (!parsed.success || !ReportTokenSchema.safeParse(token).success) return { ok: false, error: "invalid_input" };
+  const f = parsed.data;
+  const supabase = createAdminClient();
+  const { data: report } = await supabase.from("lost_reports").select("id, facility_id, status, user_category").eq("access_token", token).maybeSingle();
+  if (!report) return { ok: false, error: "not_found" };
+  if (report.status !== "open") return { ok: false, error: "conflict" };
+  if (!f.description && !report.user_category) return { ok: false, error: "invalid_input" };
+
+  const { error } = await supabase
+    .from("lost_reports")
+    .update({ description: f.description, colors: f.colors, brand: f.brand, lost_time_of_day: f.lostTimeOfDay, ai_status: "pending" })
+    .eq("id", report.id)
+    .eq("status", "open");
+  if (error) return failed("update_report", error.code);
+  await supabase.from("item_events").insert({ facility_id: report.facility_id, lost_report_id: report.id, type: "report_updated", payload: {} });
+
+  after(() => processReport(report.id));
+  redirect(`/r/${token}`);
 }
 
 function parseJson(raw: FormDataEntryValue | null): unknown {

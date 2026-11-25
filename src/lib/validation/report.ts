@@ -62,6 +62,10 @@ export const LostReportInputSchema = z.object({
 
 export type LostReportInput = z.infer<typeof LostReportInputSchema>;
 
+/** P-04 [신고 내용 보완하기]: what the person can add later (docs/04-architecture.md §6-2 updateLostReport). */
+export const ReportUpdateSchema = LostReportInputSchema.pick({ colors: true, brand: true, description: true, lostTimeOfDay: true });
+export type ReportUpdateInput = z.input<typeof ReportUpdateSchema>;
+
 const EmailSchema = z.email();
 
 /** Business rules the schema cannot express. `today` is the Seoul date (lib/dates). */

@@ -138,7 +138,16 @@ function CandidateList({ view, token }: { view: ReportView; token: string }) {
         <h1 className="text-section font-bold tracking-[-0.01em] text-ink">{t.candidates.replace("{n}", String(view.candidates.length))}</h1>
         <Image src="/brand/mascot-happy.png" alt="" width={86} height={64} className="h-16 w-[86px] object-contain" />
       </div>
-      {showInfoLow(view) ? <p className="rounded-ui-sm bg-neutral-bg px-3 py-2.5 text-desc text-neutral-ink">{t.infoLow}</p> : null}
+      {showInfoLow(view) ? (
+        <div className="flex flex-col gap-2 rounded-ui-sm bg-neutral-bg px-3 py-2.5">
+          <p className="text-desc text-neutral-ink">{t.infoLow}</p>
+          {view.report.status === "open" ? (
+            <Link href={`/r/${token}/edit`} className="flex min-h-11 items-center self-start text-label font-bold text-brand underline">
+              {t.improve}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
       <ul className="flex flex-col gap-3.5">
         {view.candidates.map((c) => (
           <li key={c.id}>

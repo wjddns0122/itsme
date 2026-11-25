@@ -504,7 +504,7 @@ Storage 정책: 경로 첫 폴더(`(storage.foldername(name))[1]`)가 내 시설
 | `retryReportAnalysis` | 관리자 | A-07 서랍 [다시 분석]: RLS로 신고를 확인한 뒤 `ai_status = failed`인 신고만 `processReport`를 다시 실행 (응답 전에 끝까지 기다림) | `{ id }` |
 | `getReportView` | 분실자 | 토큰으로 조회. **공개 필드만** 골라 반환 (§9-2) | 신고 요약 + 후보 공개 정보 |
 | `cancelReport` | 분실자 | `closed`, 후보 `dismissed (report_closed)` | `{ ok }` |
-| `updateLostReport` | 분실자 | 토큰 확인 후 설명·색상·브랜드·시간대·사진 보완 → 다시 정규화·매칭 | `{ ok }` |
+| `updateLostReport` | 분실자 | 토큰 확인 후 신고가 `open`일 때만 설명·색상·브랜드·시간대 보완 → `ai_status = pending`, 이벤트 `report_updated`, `after()`로 다시 정규화·매칭 (숨긴 후보는 그대로). 사진 보완은 FL-027(✂️) | P-04로 이동 |
 
 ### 6-3. 후보·소유권 확인 (`candidates.ts`)
 
