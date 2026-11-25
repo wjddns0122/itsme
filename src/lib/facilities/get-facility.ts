@@ -28,7 +28,7 @@ export async function getFacilityPage(slug: string): Promise<FacilityPageData | 
   const { data, error } = await supabase
     .from("facilities")
     // §9-2 columns plus is_listed (robots only). Never add address or ids.
-    .select("slug, name, region, type, intro, homepage_url, contact_phone, hours, desk_location, pickup_guide, is_listed")
+    .select("slug, name, region, type, intro, homepage_url, contact_phone, hours, desk_location, pickup_guide, areas, is_listed")
     .eq("slug", slug)
     .maybeSingle();
   if (error) throw new Error(`facility page lookup failed: ${error.code}`);

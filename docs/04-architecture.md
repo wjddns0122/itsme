@@ -584,7 +584,7 @@ return { ok: true, data: { token: report.access_token } };
 | `lost_reports` | `description`, `lost_from`, `lost_to`, `lost_area`, `lost_time_of_day`, `is_rental`, `status`, `created_at`, `ai_status` |
 | `match_candidates` | `id`, `status`, 유사도 라벨(높음/보통 — 점수 숫자 아님), 정보 부족 표시(충족도 숫자 아님), `pickup_message`(승인 시), `proof_request`(추가 증빙 요청 시). **`ai_verdict`, `review_note`는 절대 안 됨** |
 | `found_items` | `category`, `subcategory`, `public_summary`, 습득 날짜(일 단위), `found_area`. **민감 물품이면 `category`만** |
-| `facilities` | `slug`, `name`, `region`, `type`, `intro`, `homepage_url`, `contact_phone`, `hours`, `desk_location`, `pickup_guide`. `is_listed = false` 시설은 검색 결과에 넣지 않는다 |
+| `facilities` | `slug`, `name`, `region`, `type`, `intro`, `homepage_url`, `contact_phone`, `hours`, `desk_location`, `pickup_guide`, `areas`(신고 양식 구역 칩). `is_listed = false` 시설은 검색 결과에 넣지 않는다 |
 
 이 목록 밖의 필드를 분실자 응답에 넣는 코드는 리뷰에서 막는다. 특히 `contact_key`와 같은 연락처의 다른 신고가 있는지 여부는 절대 넣지 않는다 (F9 개인정보 규칙). `getReportView`에 이 목록을 그대로 코드로 둔다.
 

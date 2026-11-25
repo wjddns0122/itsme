@@ -193,18 +193,18 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [x] 시설 정보는 service role로 §9-2 허용 필드만 조회 (`toFacilityPage` 테스트, 화면 HTML에 주소 없음 확인). `use cache` + 태그 `facility:{slug}`, A-08 저장 때 `revalidateTag`
 - 참고: `03-screens.md` P-02, P-06
 
-### FL-021 · 분실 신고 양식과 저장
+### FL-021 · 분실 신고 양식과 저장 ✅
 - P0 · 2.5h · 의존 FL-020
-- 범위: `src/app/(public)/f/[slug]/report/`, `src/server/actions/reports.ts`(`createLostReport`)
+- 범위: `src/app/(public)/f/[slug]/report/`, `src/components/public/report/`, `src/server/actions/reports.ts`(`createLostReport`), `src/lib/validation/{report,contact}.ts`, `src/lib/dates.ts`. "물건이 나온 사진" 올리기는 FL-027에서
 - 수용 기준
-  - [ ] P-03 3단계, 단계 이동 시 값 유지, 진행 표시
-  - [ ] 분류나 설명 중 하나만 있어도 제출. 색상·브랜드·구역·시간대에 "잘 모르겠어요" (`null`로 저장)
-  - [ ] 시간대(오전/점심/오후/저녁/모름), 대여 물품 체크 저장. 대여면 렌탈샵 안내
-  - [ ] 검증·에러 문구 (`03-screens.md` P-03)
-  - [ ] 토큰 `randomBytes(24)` base64url, honeypot 입력칸
-  - [ ] `report_started_at` 저장, 이벤트 `report_created`
-  - [ ] 제출 후 `/r/{token}?new=1` 이동, 응답 1초 이내
-  - [ ] 중복 제출 방지
+  - [x] P-03 3단계, 단계 이동 시 값 유지(브라우저 뒤로 가기 포함), 진행 표시
+  - [x] 분류나 설명 중 하나만 있어도 제출. 색상·브랜드·구역·시간대에 "잘 모르겠어요" (`null`로 저장)
+  - [x] 시간대(오전/점심/오후/저녁/모름), 대여 물품 체크 저장. 대여면 렌탈샵 안내 (안내 문구는 P-04, FL-023)
+  - [x] 검증·에러 문구 (`03-screens.md` P-03)
+  - [x] 토큰 `randomBytes(24)` base64url, honeypot 입력칸
+  - [x] `report_started_at` 저장, 이벤트 `report_created`
+  - [x] 제출 후 `/r/{token}?new=1` 이동, 응답 1초 이내 (저장만 하고 정규화·매칭은 응답 뒤, FL-022·031)
+  - [x] 중복 제출 방지 (버튼 잠금 + 같은 연락처·내용 60초 안 재제출은 첫 신고로 보냄. 두 번 눌러 1건 저장 확인)
 - 참고: `03-screens.md` P-03, `02-user-flows.md` §3, `04-architecture.md` §6-2
 
 ### FL-022 · 설명 정규화와 비교용 텍스트

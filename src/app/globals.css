@@ -40,6 +40,8 @@
   --text-desc--line-height: 1.5;
   --text-body: 14px;
   --text-body--line-height: 1.55;
+  --text-input: 15px; /* 본문/입력 */
+  --text-input--line-height: 1.55;
   --text-section: 16px;
   --text-section--line-height: 1.4;
   --text-character: 18px;

@@ -9,6 +9,8 @@ export type PublicFacilityPage = PublicFacility & {
   hours: string | null;
   deskLocation: string | null;
   pickupGuide: string | null;
+  /** Areas for the report form (P-03 구역 칩). */
+  areas: string[];
 };
 
 export type FacilityRow = {
@@ -22,6 +24,7 @@ export type FacilityRow = {
   hours: string | null;
   desk_location: string | null;
   pickup_guide: string | null;
+  areas: string[];
 };
 
 export const FacilitySlugSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/);
@@ -40,6 +43,7 @@ export function toFacilityPage(row: FacilityRow): PublicFacilityPage {
     hours: blankToNull(row.hours),
     deskLocation: blankToNull(row.desk_location),
     pickupGuide: blankToNull(row.pickup_guide),
+    areas: row.areas.map((a) => a.trim()).filter(Boolean),
   };
 }
 

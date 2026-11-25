@@ -12,6 +12,7 @@ const row: FacilityRow = {
   hours: "매일 08:30 ~ 22:00",
   desk_location: "센터하우스 1층",
   pickup_guide: null,
+  areas: ["리프트 A", "  ", "렌탈샵"],
 };
 
 describe("toFacilityPage", () => {
@@ -23,6 +24,7 @@ describe("toFacilityPage", () => {
     expect(page).not.toHaveProperty("id");
     expect(page.intro).toBeNull();
     expect(page.contactPhone).toBe("033-000-0000");
+    expect(page.areas).toEqual(["리프트 A", "렌탈샵"]);
   });
 });
 

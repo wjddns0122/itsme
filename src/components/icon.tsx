@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 // so states use separate files (e.g. "package" and "package-active").
 export type IconName =
   | "alert-circle"
+  | "check"
   | "chevron-right"
   | "clock"
   | "dashboard"
@@ -16,6 +17,7 @@ export type IconName =
   | "facility-ski"
   | "file-text"
   | "file-text-active"
+  | "lock"
   | "log-out"
   | "package"
   | "package-active"
@@ -32,7 +34,7 @@ export type IconName =
 
 type IconProps = {
   name: IconName;
-  size: 16 | 18 | 20 | 22 | 26;
+  size: 14 | 16 | 18 | 20 | 22 | 26;
   className?: string;
 };
 
