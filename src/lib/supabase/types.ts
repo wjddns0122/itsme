@@ -559,6 +559,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_lost_report: { Args: { p_report_id: string }; Returns: boolean }
       candidate_items_for_report: {
         Args: { p_limit?: number; p_report_id: string }
         Returns: {
@@ -587,6 +588,10 @@ export type Database = {
           lost_to: string
           search_text: string
         }[]
+      }
+      dismiss_candidate_by_reporter: {
+        Args: { p_candidate_id: string; p_report_id: string }
+        Returns: boolean
       }
       mark_returned: {
         Args: {

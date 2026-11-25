@@ -1,0 +1,240 @@
+// P-04 신고 현황·후보
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { Suspense, type ReactNode } from "react";
+import { Icon, type IconName } from "@/components/icon";
+import { FacilityLoading } from "@/components/public/facility-states";
+import { PublicShell } from "@/components/public/public-shell";
+import { AutoRefresh, CancelReport, CandidateActions, CopyLinkButton } from "@/components/public/status/report-actions";
+import { formatMonthDay } from "@/lib/dates";
+import { getReportView } from "@/lib/reports/get-view";
+import { reportPhase, showInfoLow, type PublicCandidate, type ReportView } from "@/lib/reports/view";
+import { cn } from "@/lib/utils";
+import { REPORT_CATEGORY_CHIPS } from "@/lib/validation/report";
+import ko from "../../../../../messages/ko.json";
+
+const t = ko.public.status;
+const REFRESH_WHILE_ANALYZING_MS = 5_000;
+
+export const metadata: Metadata = {
+  title: t.metaTitle,
+  // A private link: never indexed, never sent as a referrer.
+  robots: { index: false, follow: false },
+  referrer: "no-referrer",
+};
+
+export default function ReportStatusPage({ params, searchParams }: PageProps<"/r/[token]">) {
+  return (
+    <PublicShell
+      topRight={
+        <Suspense fallback={null}>
+          <FacilityName params={params} />
+        </Suspense>
+      }
+    >
+      <Suspense fallback={<FacilityLoading />}>
+        <ReportStatus params={params} searchParams={searchParams} />
+      </Suspense>
+    </PublicShell>
+  );
+}
+
+async function FacilityName({ params }: Pick<PageProps<"/r/[token]">, "params">) {
+  const { token } = await params;
+  const result = await getReportView(token);
+  return result.status === "ok" ? result.view.facility.name : null;
+}
+
+async function ReportStatus({ params, searchParams }: Pick<PageProps<"/r/[token]">, "params" | "searchParams">) {
+  const [{ token }, query] = await Promise.all([params, searchParams]);
+  const result = await getReportView(token);
+  if (result.status === "not_found") return <Message text={t.notFound} actionLabel={t.searchAgain} actionHref="/" />;
+  if (result.status === "error") return <Message text={t.actionFailed} actionLabel={ko.public.facility.retry} actionHref={`/r/${token}`} />;
+
+  const { view } = result;
+  const phase = reportPhase(view);
+  const isNew = query.new === "1";
+
+  return (
+    <div className="flex flex-col gap-3.5">
+      {isNew ? <NewReportBanner rental={view.report.isRental} /> : null}
+      <ReportSummary view={view} />
+
+      {phase === "analyzing" ? (
+        <>
+          <AutoRefresh everyMs={REFRESH_WHILE_ANALYZING_MS} />
+          <StateNote image="/brand/mascot-laptop.png" text={t.analyzing} live />
+        </>
+      ) : null}
+      {phase === "empty" ? <StateNote image="/brand/mascot-curious.png" text={t.empty} /> : null}
+      {phase === "closed" ? <StateNote image="/brand/mascot-curious.png" text={t.cancelled} /> : null}
+      {phase === "approved" ? <Approved view={view} /> : null}
+      {phase === "claimed" || phase === "needs_proof" ? <ClaimInProgress view={view} phase={phase} /> : null}
+      {phase === "candidates" ? <CandidateList view={view} token={token} /> : null}
+
+      {phase !== "closed" && phase !== "approved" ? (
+        <div className="flex justify-center pt-4">
+          <CancelReport token={token} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NewReportBanner({ rental }: { rental: boolean }) {
+  return (
+    <section className="flex flex-col gap-2 rounded-ui-md border-[1.5px] border-brand bg-surface p-3.5" aria-live="polite">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-body leading-[1.5] font-bold text-ink">{t.newBanner}</p>
+        <CopyLinkButton />
+      </div>
+      <p className="text-desc text-ink-muted">{t.newBannerSub}</p>
+      {rental ? <p className="text-desc font-bold text-blush-ink">{t.rentalNotice}</p> : null}
+    </section>
+  );
+}
+
+function dateRange(from: string, to: string): string {
+  return from === to ? formatMonthDay(from) : `${formatMonthDay(from)} ~ ${formatMonthDay(to)}`;
+}
+
+function ReportSummary({ view }: { view: ReportView }) {
+  const { report } = view;
+  const chipLabel = REPORT_CATEGORY_CHIPS.find((c) => c.value === report.userCategory)?.label;
+  const title = report.description.split("\n")[0] || chipLabel || "";
+  const meta = [dateRange(report.lostFrom, report.lostTo), report.lostArea].filter(Boolean).join(" · ");
+
+  return (
+    <section className="flex flex-col gap-1 rounded-ui-md border border-line bg-surface px-3.5 py-3">
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 truncate text-body leading-[1.5] font-bold text-ink">{title}</p>
+        <span className="shrink-0 rounded-ui-pill bg-blush px-[9px] py-0.5 text-caption font-bold text-blush-ink">{t.reportStatus[report.status]}</span>
+      </div>
+      <p className="text-caption font-medium text-ink-muted">{meta}</p>
+    </section>
+  );
+}
+
+function StateNote({ image, text, live }: { image: string; text: string; live?: boolean }) {
+  return (
+    <section role={live ? "status" : undefined} className="flex flex-col items-center gap-2.5 pt-4 text-center">
+      <Image src={image} alt="" width={130} height={100} className="h-[100px] w-[130px] object-contain" />
+      <p className="text-body leading-[1.5] font-bold text-ink">{text}</p>
+    </section>
+  );
+}
+
+function CandidateList({ view, token }: { view: ReportView; token: string }) {
+  return (
+    <section className="flex flex-col gap-3.5">
+      <div className="flex items-end justify-between">
+        <h1 className="text-section font-bold tracking-[-0.01em] text-ink">{t.candidates.replace("{n}", String(view.candidates.length))}</h1>
+        <Image src="/brand/mascot-happy.png" alt="" width={86} height={64} className="h-16 w-[86px] object-contain" />
+      </div>
+      {showInfoLow(view) ? <p className="rounded-ui-sm bg-neutral-bg px-3 py-2.5 text-desc text-neutral-ink">{t.infoLow}</p> : null}
+      <ul className="flex flex-col gap-3.5">
+        {view.candidates.map((c) => (
+          <li key={c.id}>
+            <CandidateCard candidate={c}>
+              <CandidateActions token={token} candidateId={c.id} />
+            </CandidateCard>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// Figma draws the goggles icon only; other categories use the generic package icon for now.
+function categoryIcon(categoryLabel: string): IconName {
+  return categoryLabel === "고글" ? "category-goggles" : "package";
+}
+
+function CandidateCard({ candidate, children }: { candidate: PublicCandidate; children?: ReactNode }) {
+  const { item } = candidate;
+  const meta = [item.foundDate ? t.foundOn.replace("{date}", formatMonthDay(item.foundDate)) : null, item.foundArea].filter(Boolean).join(" · ");
+  return (
+    <article className="flex flex-col gap-2.5 rounded-ui-md border border-line bg-surface p-3.5">
+      <div className="flex items-start gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-ui-sm bg-blush">
+          <Icon name={categoryIcon(item.category)} size={24} />
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <p className="text-body leading-[1.5] font-bold text-ink">{item.summary ?? item.category}</p>
+          {meta ? <p className="text-caption font-medium text-ink-muted">{meta}</p> : null}
+        </div>
+      </div>
+      <span
+        className={cn(
+          "self-start rounded-ui-pill px-[9px] py-0.5 text-caption font-bold",
+          candidate.similarity === "high" ? "bg-butter text-butter-ink" : "bg-neutral-bg text-neutral-ink",
+        )}
+      >
+        {t.similarity[candidate.similarity]}
+      </span>
+      {children}
+    </article>
+  );
+}
+
+function ClaimInProgress({ view, phase }: { view: ReportView; phase: "claimed" | "needs_proof" }) {
+  const active = view.candidates.find((c) => c.status === phase);
+  return (
+    <section className="flex flex-col gap-3.5">
+      {active ? <CandidateCard candidate={active} /> : null}
+      {phase === "claimed" ? (
+        <StateNote image="/brand/mascot-laptop.png" text={t.claimPending} />
+      ) : (
+        <div className="flex flex-col gap-2 rounded-ui-md border-[1.5px] border-brand bg-surface p-3.5">
+          <p className="text-body leading-[1.5] font-bold text-ink">{t.needsProof}</p>
+          {active?.proofRequest ? <p className="text-body text-ink">{active.proofRequest}</p> : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Approved({ view }: { view: ReportView }) {
+  const approved = view.candidates.find((c) => c.status === "approved");
+  const { facility } = view;
+  const rows = [
+    { label: t.pickupPlace, value: facility.deskLocation },
+    { label: t.pickupHours, value: facility.hours },
+    { label: t.pickupBring, value: facility.pickupGuide },
+    { label: t.pickupContact, value: facility.contactPhone },
+    { label: t.pickupNote, value: approved?.pickupMessage ?? null },
+  ].filter((r): r is { label: string; value: string } => Boolean(r.value));
+
+  return (
+    <section className="flex flex-col gap-3.5">
+      <div className="flex flex-col items-center gap-1.5 pt-2">
+        <p className="rounded-[16px] border-[1.5px] border-line-strong bg-surface px-3.5 py-1.5 font-brand text-character text-ink">{t.approved}</p>
+        <Image src="/brand/mascot-found.png" alt="" width={170} height={124} className="h-[124px] w-[170px] object-contain" />
+      </div>
+      <div className="flex flex-col gap-2 rounded-ui-md border-[1.5px] border-brand bg-surface p-3.5">
+        <h1 className="text-section font-bold tracking-[-0.01em] text-ink">{t.pickupTitle}</h1>
+        <dl className="flex flex-col gap-2">
+          {rows.map((r) => (
+            <div key={r.label} className="flex items-start gap-2.5">
+              <dt className="w-16 shrink-0 text-caption font-medium text-ink-muted">{r.label}</dt>
+              <dd className="min-w-0 flex-1 text-label font-bold text-ink">{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+function Message({ text, actionLabel, actionHref }: { text: string; actionLabel: string; actionHref: string }) {
+  return (
+    <section role="alert" className="flex flex-col items-center gap-3 pt-20 text-center">
+      <Image src="/brand/mascot-curious.png" alt="" width={150} height={114} className="h-[114px] w-[150px] object-contain" />
+      <p className="text-section font-bold tracking-[-0.01em] text-ink">{text}</p>
+      <Link href={actionHref} className="flex h-11 items-center rounded-ui-sm bg-brand px-4 text-button font-bold text-on-brand">
+        {actionLabel}
+      </Link>
+    </section>
+  );
+}

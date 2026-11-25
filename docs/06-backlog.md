@@ -217,16 +217,16 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] "에어팟 잃어버렸어요" → brand `Apple`, 분류 `electronics.earphones`
 - 참고: `05-ai-matching.md` §2-4, §4
 
-### FL-023 · 신고 현황 페이지
+### FL-023 · 신고 현황 페이지 ✅
 - P0 · 2h · 의존 FL-021
-- 범위: `src/app/(public)/r/[token]/page.tsx`, `getReportView`
+- 범위: `src/app/(public)/r/[token]/page.tsx`, `src/lib/reports/{view,get-view}.ts`(`getReportView`), `src/components/public/status/`
 - 수용 기준
-  - [ ] 첫 진입 배너 + 링크 복사
-  - [ ] 분석 중 / 후보 없음 / 후보 카드 / 확인 중 / 승인됨 상태별 화면
-  - [ ] 분석 중이면 5초마다 새로고침
-  - [ ] **§9-2 허용 필드만 반환** (테스트로 확인: 응답에 `private_features`, `photo_paths`, `score` 없음)
-  - [ ] 민감 물품은 분류만 표시
-  - [ ] 정보 충족도가 낮으면 "정보가 적어요" 안내 + [신고 내용 보완하기] (`updateLostReport` → 다시 매칭)
+  - [x] 첫 진입 배너 + 링크 복사 (대여 물품이면 렌탈샵 안내도)
+  - [x] 분석 중 / 후보 없음 / 후보 카드 / 확인 중 / 승인됨 상태별 화면 (+ 추가 증빙 요청, 취소됨)
+  - [x] 분석 중이면 5초마다 새로고침
+  - [x] **§9-2 허용 필드만 반환** (테스트로 확인: 응답에 `private_features`, `photo_paths`, `score` 없음. 실제 화면 HTML에도 비공개 특징·보관 위치·점수 없음 확인)
+  - [x] 민감 물품은 분류만 표시
+  - [ ] 정보 충족도가 낮으면 "정보가 적어요" 안내 + [신고 내용 보완하기] (`updateLostReport` → 다시 매칭) — 안내는 완료, 보완하기는 다시 매칭이 생기는 FL-031 뒤에
 - 참고: `03-screens.md` P-04, `04-architecture.md` §9-2
 
 ### FL-024 · 관리자 신고 목록, 대리 신고
@@ -324,13 +324,13 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] 목록의 "후보 n" 배지
 - 참고: `03-screens.md` A-05
 
-### FL-034 · 후보 숨김, 신고 취소
+### FL-034 · 후보 숨김, 신고 취소 ✅ (FL-023과 함께, DB 함수 `dismiss_candidate_by_reporter`·`cancel_lost_report`)
 - P0 · 1h · 의존 FL-023
 - 범위: `dismissCandidate`, `cancelReport`
 - 수용 기준
-  - [ ] 토큰 소유 확인 후 처리
-  - [ ] 숨긴 후보는 재매칭해도 다시 안 나타남
-  - [ ] 취소 시 신고 `closed`, 후보 `dismissed (report_closed)`
+  - [x] 토큰 소유 확인 후 처리
+  - [ ] 숨긴 후보는 재매칭해도 다시 안 나타남 — 매칭 저장(FL-031)이 `dismissed`를 덮어쓰지 않는지 그때 확인
+  - [x] 취소 시 신고 `closed`, 후보 `dismissed (report_closed)`
 - 참고: `02-user-flows.md` §5, §9
 
 ---

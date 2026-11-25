@@ -581,7 +581,7 @@ return { ok: true, data: { token: report.access_token } };
 
 | 테이블 | 허용 필드 |
 |---|---|
-| `lost_reports` | `description`, `lost_from`, `lost_to`, `lost_area`, `lost_time_of_day`, `is_rental`, `status`, `created_at`, `ai_status` |
+| `lost_reports` | `description`, `user_category`(본인이 고른 분류), `lost_from`, `lost_to`, `lost_area`, `lost_time_of_day`, `is_rental`, `status`, `created_at`, `ai_status` |
 | `match_candidates` | `id`, `status`, 유사도 라벨(높음/보통 — 점수 숫자 아님), 정보 부족 표시(충족도 숫자 아님), `pickup_message`(승인 시), `proof_request`(추가 증빙 요청 시). **`ai_verdict`, `review_note`는 절대 안 됨** |
 | `found_items` | `category`, `subcategory`, `public_summary`, 습득 날짜(일 단위), `found_area`. **민감 물품이면 `category`만** |
 | `facilities` | `slug`, `name`, `region`, `type`, `intro`, `homepage_url`, `contact_phone`, `hours`, `desk_location`, `pickup_guide`, `areas`(신고 양식 구역 칩). `is_listed = false` 시설은 검색 결과에 넣지 않는다 |

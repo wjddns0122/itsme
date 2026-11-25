@@ -109,6 +109,48 @@
         "not_found": "시설을 찾을 수 없어요. 시설 이름으로 다시 검색해 주세요.",
         "internal": "신고를 보내지 못했어요. 잠시 후 다시 시도해 주세요."
       }
+    },
+    "status": {
+      "metaTitle": "내 신고 | 잇츠미",
+      "newBanner": "신고했어요! 이 페이지 주소를 저장해 두세요.",
+      "newBannerSub": "진행 상황은 전화하지 않고 이 페이지에서 확인할 수 있어요.",
+      "copyLink": "링크 복사",
+      "copied": "복사했어요",
+      "rentalNotice": "빌린 물건이라면 빌린 곳(렌탈샵)에도 알려주세요.",
+      "reportStatus": {
+        "open": "찾는 중",
+        "claimed": "확인 중",
+        "resolved": "찾았어요",
+        "closed": "취소됨"
+      },
+      "analyzing": "비슷한 물건을 찾고 있어요…",
+      "empty": "아직 비슷한 물건이 없어요. 새로 들어오면 알려드릴게요.",
+      "candidates": "후보 {n}",
+      "infoLow": "알려주신 정보가 적어서 비슷한 물건을 넓게 보여드려요. 특징을 더 적으면 정확해져요.",
+      "similarity": {
+        "high": "유사도 높음",
+        "medium": "유사도 보통"
+      },
+      "foundOn": "습득 {date}",
+      "claim": "내 물건 같아요",
+      "dismiss": "아니에요",
+      "claimPending": "관리자가 확인하고 있어요. 보통 하루 안에 연락드려요.",
+      "needsProof": "확인을 위해 조금 더 알려주세요.",
+      "approved": "찾았어요!",
+      "pickupTitle": "수령 안내",
+      "pickupPlace": "장소",
+      "pickupHours": "운영 시간",
+      "pickupBring": "지참물",
+      "pickupContact": "연락처",
+      "pickupNote": "관리자 안내",
+      "cancel": "신고 취소",
+      "cancelConfirm": "신고를 취소할까요? 취소하면 더 이상 비슷한 물건을 찾지 않아요.",
+      "cancelYes": "취소할게요",
+      "cancelNo": "아니요",
+      "cancelled": "신고를 취소했어요.",
+      "notFound": "신고를 찾을 수 없어요.",
+      "searchAgain": "시설 찾기",
+      "actionFailed": "처리하지 못했어요. 잠시 후 다시 시도해 주세요."
     }
   },
   "admin": {

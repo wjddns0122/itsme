@@ -17,6 +17,10 @@
   --color-brand: #c23f36; /* color/brand/red */
   --color-blush: #fdded9; /* color/brand/blush */
   --color-blush-ink: #8e2c24; /* color/brand/blush-ink */
+  --color-butter: #fddf9a; /* color/brand/butter */
+  --color-butter-ink: #6b4a12; /* color/brand/butter-ink */
+  --color-neutral-bg: #f1e8e5; /* color/state/neutral-bg */
+  --color-neutral-ink: #5a4643; /* color/state/neutral-ink */
   --color-danger: #9f1d2c; /* color/feedback/danger */
   --color-warn-bg: #fff1cf; /* color/feedback/warn-bg */
   --color-ok: #1e6e44; /* color/feedback/ok */
