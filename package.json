@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "db:types": "supabase gen types typescript --linked > src/lib/supabase/types.ts.tmp && mv src/lib/supabase/types.ts.tmp src/lib/supabase/types.ts || (rm -f src/lib/supabase/types.ts.tmp && exit 1)",
-    "db:seed": "node --env-file=.env.local scripts/seed.mts"
+    "db:seed": "node --env-file=.env.local scripts/seed.mts",
+    "eval": "node --env-file=.env.local node_modules/vitest/vitest.mjs run --config eval/vitest.config.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -450,22 +450,22 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 
 ## E8. 평가·지표
 
-### FL-080 · 평가 데이터
+### FL-080 · 평가 데이터 🟡 안내·형식 완료, 팀 수집 남음
 - P0 · 1h (+ 팀 수집 시간) · 의존 없음
 - 범위: `eval/cases.json`, `eval/photos/`, `eval/README.md`
 - 수용 기준
-  - [ ] `05-ai-matching.md` §7-1 수집 절차를 팀원용으로 한 장 정리
+  - [x] `05-ai-matching.md` §7-1 수집 절차를 팀원용으로 한 장 정리 (`eval/README.md`, `eval/cases.example.json`)
   - [ ] 습득물 30개 이상, 미끼 신고 10건, 비슷한 물건 묶음 4개 이상, 중복 신고 3쌍, 진짜 주인 확인 답변과 가짜 확인 요청 각 10건 이상, 기억이 흐린 신고 10건
   - [ ] `split` dev/test 반반
 - 참고: `05-ai-matching.md` §7-1, §7-2
 
-### FL-081 · 평가 스크립트
+### FL-081 · 평가 스크립트 🟡 스크립트 완료, 실행은 데이터·사람 승인 후
 - P0 · 2h · 의존 FL-031, FL-080
 - 범위: `eval/run.ts`, `package.json`의 `eval` 스크립트
 - 수용 기준
-  - [ ] §7-3 절차 (평가 전용 시설 생성 → 실행 → 결과 → 정리)
-  - [ ] §7-4 지표 전부, dev/test 따로
-  - [ ] `eval/results/YYYY-MM-DD.md` 저장
+  - [x] §7-3 절차 (평가 전용 시설 생성 → 실행 → 결과 → 정리) — `eval/run.eval.ts`, `pnpm eval` (Vitest로 실행, `.env.local`은 `node --env-file`)
+  - [x] §7-4 지표 전부, dev/test 따로 (`eval/metrics.ts`, 테스트). 건당 비용은 토큰 수로 기록
+  - [x] `eval/results/YYYY-MM-DD.md` 저장
 - 참고: `05-ai-matching.md` §7
 
 ### FL-082 · 소요시간 지표 ✅ (값은 파일럿·사용성 테스트 때 채움)

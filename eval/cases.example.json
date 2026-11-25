@@ -1,0 +1,33 @@
+{
+  "items": [
+    {
+      "key": "I01",
+      "photos": ["eval/photos/I01-1.jpg"],
+      "found_at": "2026-11-27T10:20:00+09:00",
+      "found_area": "3층 강의실",
+      "truth": { "category": "electronics.earphones", "colors": ["검정"] }
+    }
+  ],
+  "reports": [
+    {
+      "key": "R01",
+      "description": "검은색 무선 이어폰인데 케이스에 은색 키링이 달려 있어요",
+      "secret_detail": "케이스 안쪽에 고양이 스티커",
+      "user_category": "electronics.earphones",
+      "lost_from": "2026-11-27",
+      "lost_to": "2026-11-27",
+      "lost_area": "3층 강의실",
+      "expected_item": "I01",
+      "split": "dev"
+    },
+    {
+      "key": "R41",
+      "description": "남색 장지갑, 지퍼 고장남",
+      "lost_from": "2026-11-26",
+      "lost_to": "2026-11-27",
+      "lost_area": null,
+      "expected_item": null,
+      "split": "test"
+    }
+  ]
+}
