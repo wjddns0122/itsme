@@ -51,8 +51,8 @@ export function ItemFilters({ query }: { query: ItemListQuery }) {
   );
 }
 
-/** Looks like Figma's "상태: 전체 ⌄" button; a native select underneath for keyboards and phones. */
-function FilterSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (v: string) => void; children: ReactNode }) {
+/** Looks like Figma's "상태: 전체 ⌄" button; a native select underneath for keyboards and phones. Shared with A-07. */
+export function FilterSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (v: string) => void; children: ReactNode }) {
   return (
     <label className="relative flex h-10 items-center gap-1 rounded-ui-sm border border-line bg-surface pr-9 pl-3 text-label font-bold text-ink">
       <span>{label}:</span>

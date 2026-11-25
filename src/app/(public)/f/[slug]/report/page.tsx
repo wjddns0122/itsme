@@ -9,6 +9,9 @@ import { seoulToday } from "@/lib/dates";
 import { loadFacility } from "@/lib/facilities/load";
 import ko from "../../../../../../messages/ko.json";
 
+// Matching runs in after() on this route (docs/04-architecture.md §7).
+export const maxDuration = 60;
+
 export async function generateMetadata({ params }: PageProps<"/f/[slug]/report">): Promise<Metadata> {
   const { slug } = await params;
   const result = await loadFacility(slug);

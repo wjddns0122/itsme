@@ -21,6 +21,13 @@ export type MatchConfig = {
   saveThreshold: number;
   notifyThreshold: number;
   coverageMinNotify: number;
+  /** Candidates per Gemini judging call, and at most per run (§5-2 AI_JUDGE_BATCH, AI_JUDGE_MAX_CANDIDATES). */
+  judgeBatch: number;
+  judgeMaxCandidates: number;
+  /** Similarity for a batch whose judging failed: neutral, and never notified (§5-4). */
+  neutralSimilarity: number;
+  /** Suggested candidates kept per report (§6). */
+  maxSuggestedPerReport: number;
 };
 
 export const DEFAULT_MATCH_CONFIG: MatchConfig = {
@@ -34,6 +41,10 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   saveThreshold: 0.45,
   notifyThreshold: 0.7,
   coverageMinNotify: 0.65,
+  judgeBatch: 20,
+  judgeMaxCandidates: 60,
+  neutralSimilarity: 0.5,
+  maxSuggestedPerReport: 5,
 };
 
 export type TimeOfDay = "morning" | "lunch" | "afternoon" | "evening";

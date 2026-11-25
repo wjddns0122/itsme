@@ -4,6 +4,7 @@ import ko from "../../../messages/ko.json";
 
 type FoundStatus = Database["public"]["Enums"]["found_status"];
 type CandidateStatus = Database["public"]["Enums"]["candidate_status"];
+type ReportStatus = Database["public"]["Enums"]["report_status"];
 
 // Badge colors from the Figma A-04 table (docs/03-screens.md §1 상태 배지).
 const ITEM_TONE: Record<FoundStatus, string> = {
@@ -21,6 +22,13 @@ const CANDIDATE_TONE: Record<CandidateStatus, string> = {
   approved: "bg-ok-bg text-ok",
   rejected: "bg-neutral-bg text-neutral-ink",
   dismissed: "bg-neutral-bg text-neutral-ink",
+};
+
+const REPORT_TONE: Record<ReportStatus, string> = {
+  open: "bg-blush text-blush-ink",
+  claimed: "bg-info-bg text-info",
+  resolved: "bg-ok-bg text-ok",
+  closed: "bg-neutral-bg text-neutral-ink",
 };
 
 const pill = "inline-flex shrink-0 items-center rounded-ui-pill px-[9px] py-0.5 text-caption font-bold whitespace-nowrap";
@@ -43,4 +51,18 @@ export function SimilarityBadge({ high }: { high: boolean }) {
       {high ? ko.public.status.similarity.high : ko.public.status.similarity.medium}
     </span>
   );
+}
+
+export function ReportStatusBadge({ status }: { status: ReportStatus }) {
+  return <span className={cn(pill, REPORT_TONE[status])}>{ko.reportStatus[status]}</span>;
+}
+
+/** 접수 경로 (A-07): QR·link or entered by an admin. */
+export function ViaBadge({ via }: { via: "web" | "admin" }) {
+  return <span className={cn(pill, "rounded-ui-sm bg-neutral-bg text-neutral-ink")}>{ko.admin.reports.via[via]}</span>;
+}
+
+/** "같은 분 신고 n건" */
+export function SameContactBadge({ count }: { count: number }) {
+  return <span className={cn(pill, "bg-butter text-butter-ink")}>{ko.admin.reports.sameContact.replace("{n}", String(count))}</span>;
 }

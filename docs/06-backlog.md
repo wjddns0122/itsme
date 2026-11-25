@@ -150,12 +150,12 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [x] 태블릿 표 / 모바일 카드, 빈 상태, 검색 결과 없음 → 대리 신고 안내
 - 참고: `03-screens.md` A-04
 
-### FL-014 · 습득물 상세, 수정 🟡 코드 완료, 재매칭 연결·로그인 상태 화면 확인 남음
+### FL-014 · 습득물 상세, 수정 🟡 코드 완료, 로그인 상태 화면 확인 남음
 - P0 · 2h · 의존 FL-013
 - 범위: `src/app/admin/items/[id]/`, `updateFoundItem`
 - 수용 기준
   - [x] 사진 넘겨보기, 전체 정보(비공개 특징 포함), 수정 (`updateFoundItem`, `search_text`·보관 기한 다시 계산, 이벤트 `edited`)
-  - [ ] 특징 관련 필드 수정 시 재매칭 (`after()`) — 매칭 실행(FL-031·032)이 생기면 연결
+  - [x] 특징 관련 필드(분류·색상·브랜드·비공개 특징)와 습득 일시·구역 수정 시 재매칭 (`after()`)
   - [x] 처리 이력 타임라인 (`item_events`)
   - 후보를 눌러 신고 상세(서랍)를 여는 것은 관리자 신고 화면(FL-024)에서 붙인다
 - 참고: `03-screens.md` A-05
@@ -208,14 +208,14 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [x] 중복 제출 방지 (버튼 잠금 + 같은 연락처·내용 60초 안 재제출은 첫 신고로 보냄. 두 번 눌러 1건 저장 확인)
 - 참고: `03-screens.md` P-03, `02-user-flows.md` §3, `04-architecture.md` §6-2
 
-### FL-022 · 설명 정규화와 비교용 텍스트
+### FL-022 · 설명 정규화와 비교용 텍스트 🟡 코드 완료, "에어팟" 실제 응답 확인 남음
 - P0 · 1.5h · 의존 FL-011, FL-021
 - 범위: `src/lib/ai/normalize.ts`, `src/lib/matching/search-text.ts`, `processReport`의 앞부분
 - 수용 기준
-  - [ ] §4-2 프롬프트, 연락처 미포함 확인 테스트
-  - [ ] `buildSearchText` (§2-4) + 단위 테스트
-  - [ ] 정규화 실패 시 원문으로 판정, `ai_status = failed`
-  - [ ] "에어팟 잃어버렸어요" → brand `Apple`, 분류 `electronics.earphones`
+  - [x] §4-2 프롬프트, 연락처 미포함 확인 테스트 (글 속 전화번호·이메일도 가림)
+  - [x] `buildSearchText` (§2-4) + 단위 테스트
+  - [x] 정규화 실패 시 원문으로 판정, `ai_status = failed` — 개발 DB에서 Gemini 503일 때 확인
+  - [ ] "에어팟 잃어버렸어요" → brand `Apple`, 분류 `electronics.earphones` — 테스트 당시 Gemini가 503을 돌려줘 실제 응답 미확인. FL-081 평가 케이스에 넣는다
 - 참고: `05-ai-matching.md` §2-4, §4
 
 ### FL-023 · 신고 현황 페이지 ✅
@@ -230,22 +230,23 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] 정보 충족도가 낮으면 "정보가 적어요" 안내 + [신고 내용 보완하기] (`updateLostReport` → 다시 매칭) — 안내는 완료, 보완하기는 다시 매칭이 생기는 FL-031 뒤에
 - 참고: `03-screens.md` P-04, `04-architecture.md` §9-2
 
-### FL-024 · 관리자 신고 목록, 대리 신고
+### FL-024 · 관리자 신고 목록, 대리 신고 🟡 코드 완료, 로그인 상태 화면 확인 남음
 - P0 · 1.5h · 의존 FL-021 · 대리 신고 ✂️
 - 범위: `src/app/admin/reports/`, `createReportByAdmin`
 - 수용 기준
-  - [ ] 목록: 신고일, 설명 첫 줄, 기간, 상태, 후보 수, 접수 경로
-  - [ ] 대리 신고 한 화면 양식, 완료 후 링크 복사
+  - [x] 목록: 신고일, 설명 첫 줄, 기간, 상태, 후보 수, 접수 경로 (+ 문의 수, 상태·경로·기간 필터, 50건씩)
+  - [x] 대리 신고 한 화면 양식, 완료 후 링크 복사 (`createReportByAdmin`)
+  - [x] 신고 서랍: 내용·연락처·나만 아는 특징·후보·문의 기록, [신고 링크 복사], 실패 시 [다시 분석] (FL-032의 A-07 몫)
 - 참고: `03-screens.md` A-07
 
-### FL-025 · 같은 연락처 신고 묶기
+### FL-025 · 같은 연락처 신고 묶기 🟡 알림 1통 규칙은 FL-050에서
 - P0 · 1.5h · 의존 FL-021, FL-024
 - 범위: `src/lib/validation/contact.ts`, `createLostReport`·`createReportByAdmin`의 `contact_key` 계산, A-07 묶음 표시, `findReportsByContact`
 - 수용 기준
-  - [ ] `toContactKey()`: 전화번호 숫자만·앞의 82는 0으로, 이메일은 소문자. 단위 테스트
-  - [ ] 같은 전화번호로 신고 2건 → A-07에서 "같은 분 신고 2건" 한 묶음
-  - [ ] 연락처(뒷자리 4개 또는 이메일)로 신고 검색
-  - [ ] 분실자 응답(`getReportView`)에 `contact_key`와 다른 신고 정보가 없다 (테스트)
+  - [x] `toContactKey()`: 전화번호 숫자만·앞의 82는 0으로, 이메일은 소문자. 단위 테스트
+  - [x] 같은 전화번호로 신고 2건 → A-07에서 "같은 분 신고 2건" 한 묶음 (`groupReports`, 테스트)
+  - [x] 연락처(뒷자리 4개 또는 이메일)로 신고 검색 (`parseContactSearch`, 테스트)
+  - [x] 분실자 응답(`getReportView`)에 `contact_key`와 다른 신고 정보가 없다 (테스트, FL-023 때 작성)
   - [ ] 같은 `contact_key`의 신고들에 같은 습득물 알림은 1통만 (FL-050에서 연결)
 - 참고: `01-prd.md` F9, `02-user-flows.md` §7-1, `04-architecture.md` §6-5
 
@@ -296,33 +297,33 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] 설정값(가중치, 임계값, COS 구간)은 인자로 주입 가능
 - 참고: `05-ai-matching.md` §5
 
-### FL-031 · 매칭 실행
+### FL-031 · 매칭 실행 ✅
 - P0 · 2h · 의존 FL-022, FL-030
 - 범위: `src/lib/matching/run.ts`, `src/lib/ai/judge.ts`
 - 수용 기준
-  - [ ] `matchForReport(reportId)`, `matchForItem(itemId)` — 후보 추리기 RPC → AI 유사도 판정(`05-ai-matching.md` §5-4, 20개씩) → 점수 → 저장
-  - [ ] 판정이 실패한 묶음은 중립값 0.5, 알림 없음
-  - [ ] §6 저장 규칙 전부 (upsert, `suggested`만 갱신, dismissed 재생성 금지, 상위 5개)
-  - [ ] 같은 함수를 두 번 실행해도 결과 동일 (테스트)
-  - [ ] 알림 대상(새로 0.70 이상, coverage 0.65 이상) 목록 반환, `coverage` 저장
-  - [ ] 상위 후보 점수 차 0.05 이내면 `breakdown.tie = true`
+  - [x] `matchForReport(reportId)`, `matchForItem(itemId)` — 후보 추리기 RPC → AI 유사도 판정(`05-ai-matching.md` §5-4, 20개씩) → 점수 → 저장
+  - [x] 판정이 실패한 묶음은 중립값 0.5, 알림 없음
+  - [x] §6 저장 규칙 전부 (upsert, `suggested`만 갱신, dismissed 재생성 금지, 상위 5개) — `plan.test.ts`
+  - [x] 같은 함수를 두 번 실행해도 결과 동일 (테스트)
+  - [x] 알림 대상(새로 0.70 이상, coverage 0.65 이상) 목록 반환, `coverage` 저장
+  - [x] 상위 후보 점수 차 0.05 이내면 `breakdown.tie = true`
 - 참고: `05-ai-matching.md` §6
 
-### FL-032 · 백그라운드 연결과 실패 처리
+### FL-032 · 백그라운드 연결과 실패 처리 ✅
 - P0 · 1h · 의존 FL-031
 - 범위: `processReport`, `processItem`, `retryAnalysis`
 - 수용 기준
-  - [ ] 신고·습득물 저장 후 `after()`로 실행
-  - [ ] 단계별 실패 시 `ai_status = failed`, 이후 단계 계속
-  - [ ] A-05·A-07에 실패 표시 + [다시 분석]
-  - [ ] 신고 후 30초 안에 P-04에 결과 반영
+  - [x] 신고·습득물 저장 후 `after()`로 실행 (습득물 수정 시에도)
+  - [x] 단계별 실패 시 `ai_status = failed`, 이후 단계 계속 — 개발 DB에서 확인
+  - [x] A-05·A-07에 실패 표시 + [다시 분석] (`retryAnalysis`, `retryReportAnalysis`)
+  - [x] 신고 후 30초 안에 P-04에 결과 반영 — 개발 서버에서 약 15초
 - 참고: `04-architecture.md` §7, `02-user-flows.md` §10
 
-### FL-033 · 관리자 화면에 후보 표시
+### FL-033 · 관리자 화면에 후보 표시 ✅
 - P0 · 1h · 의존 FL-031, FL-014
 - 수용 기준
-  - [ ] A-05 매칭 후보 섹션 (신고 요약, 유사도, 상태), 누르면 신고 서랍
-  - [ ] 목록의 "후보 n" 배지
+  - [x] A-05 매칭 후보 섹션 (신고 요약, 유사도, 상태, 맞는 특징·다른 점·정보가 적어요), 누르면 A-07 신고 서랍
+  - [x] 목록의 "후보 n" 배지
 - 참고: `03-screens.md` A-05
 
 ### FL-034 · 후보 숨김, 신고 취소 ✅ (FL-023과 함께, DB 함수 `dismiss_candidate_by_reporter`·`cancel_lost_report`)
@@ -330,7 +331,7 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
 - 범위: `dismissCandidate`, `cancelReport`
 - 수용 기준
   - [x] 토큰 소유 확인 후 처리
-  - [ ] 숨긴 후보는 재매칭해도 다시 안 나타남 — 매칭 저장(FL-031)이 `dismissed`를 덮어쓰지 않는지 그때 확인
+  - [x] 숨긴 후보는 재매칭해도 다시 안 나타남 — `plan.test.ts`, 쓰기마다 `status = 'suggested'` 조건
   - [x] 취소 시 신고 `closed`, 후보 `dismissed (report_closed)`
 - 참고: `02-user-flows.md` §5, §9
 

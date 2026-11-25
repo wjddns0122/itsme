@@ -491,7 +491,7 @@ Storage 정책: 경로 첫 폴더(`(storage.foldername(name))[1]`)가 내 시설
 | `setFoundItemStatus` | `id`, `transferred` \| `disposed`, 메모 | `stored`·`claimed`에서만. 상태 변경, 열린 후보 `dismissed (item_transferred|item_disposed)`, 다른 확인 요청이 없는 신고는 `open`으로, 이벤트 — 한 트랜잭션 (`set_found_item_status` RPC, security invoker) | `{ id }` |
 | `markReturned` | `id`, `candidateId?`, 수령인, 확인 방법, 메모 | 습득물 `returned`, 후보 `approved` 유지, 신고 `resolved`, 같은 습득물의 다른 후보 `dismissed (item_returned)`, 이벤트 `returned` — 한 트랜잭션 (RPC) | `{ id }` |
 | `searchItems` | `query` 문자열 | `search_items` RPC (키워드·글자 유사도, pg_trgm) | 습득물 목록 |
-| `retryAnalysis` | `id` | `ai_status = failed`인 습득물·신고 재처리 | `{ id }` |
+| `retryAnalysis` | `id` | `ai_status = failed`인 습득물: 사진 분석을 다시 돌려 `features`·`material`만 채우고(관리자 입력은 그대로) 역방향 매칭. 민감 물품은 제외 | `{ id }` |
 
 ### 6-2. 분실 신고 (`reports.ts`)
 
@@ -499,7 +499,8 @@ Storage 정책: 경로 첫 폴더(`(storage.foldername(name))[1]`)가 내 시설
 |---|---|---|---|
 | `searchFacilities` | 분실자 (비로그인) | 검색어·종류로 `search_facilities` 호출, §9-2 허용 필드만 반환 | 시설 목록 |
 | `createLostReport` | 분실자 (비로그인) | slug로 시설 확인, 토큰 생성, `contact_key` 계산, 저장, 이벤트. `after()`로 정규화(사진이 있으면 특징 추출 후 합침) → 후보 추리기 → AI 유사도 판정 → 점수 → 이메일 | `{ token }` |
-| `createReportByAdmin` | 관리자 | `created_via = 'admin'`, 이후 같음 | `{ token }` |
+| `createReportByAdmin` | 관리자 | 로그인 관리자 클라이언트(RLS)로 저장, `created_via = 'admin'`, `created_by`, 이벤트 `report_created`, `after()`로 정규화·매칭 | `{ path: /r/{token} }` |
+| `retryReportAnalysis` | 관리자 | A-07 서랍 [다시 분석]: RLS로 신고를 확인한 뒤 `ai_status = failed`인 신고만 `processReport`를 다시 실행 (응답 전에 끝까지 기다림) | `{ id }` |
 | `getReportView` | 분실자 | 토큰으로 조회. **공개 필드만** 골라 반환 (§9-2) | 신고 요약 + 후보 공개 정보 |
 | `cancelReport` | 분실자 | `closed`, 후보 `dismissed (report_closed)` | `{ ok }` |
 | `updateLostReport` | 분실자 | 토큰 확인 후 설명·색상·브랜드·시간대·사진 보완 → 다시 정규화·매칭 | `{ ok }` |
@@ -524,7 +525,7 @@ Storage 정책: 경로 첫 폴더(`(storage.foldername(name))[1]`)가 내 시설
 
 | 함수 | 입력 | 처리 | 출력 |
 |---|---|---|---|
-| `findReportsByContact` | 전화번호 뒷자리 4개 또는 이메일 | 같은 시설 신고를 연락처로 검색, 같은 `contact_key`끼리 묶어 반환 | 신고 묶음 목록 |
+| `findReportsByContact` | 전화번호 뒷자리 4개 또는 이메일 | 같은 시설 신고를 연락처로 검색, 같은 `contact_key`끼리 묶어 반환. 구현은 A-07 목록 로더 `listLostReports`의 `contact` 필터(`parseContactSearch`: 숫자 4개는 `contact_key` 끝자리, 전화번호·이메일 전체는 정규화해서 일치)와 `groupReports` | 신고 묶음 목록 |
 | `logInquiry` | `channel`, `lostReportId?`, `contact?`, `note?` | 문의 기록 저장 (`handled_by` = 로그인 사용자), 이벤트 `inquiry_logged` | `{ id }` |
 | `listInquiries` | `lostReportId` 또는 `contactKey` | 시간순 문의 기록 | 문의 목록 |
 
@@ -545,7 +546,13 @@ return { ok: true, data: { token: report.access_token } };
 
 - `processReport` / `processItem`은 각 단계 실패 시 `ai_status = 'failed'`로 표시하고 원문으로 계속 진행한다 (`02-user-flows.md` §10).
 - 같은 작업이 두 번 돌아도 결과가 같게 만든다: 후보는 `(lost_report_id, found_item_id)` upsert, `claimed` 이후 상태는 덮어쓰지 않는다.
-- 해당 경로의 `maxDuration`은 60초로 둔다.
+- 해당 경로의 `maxDuration`은 60초로 둔다: `f/[slug]/report/page.tsx`, `admin/(console)/layout.tsx`.
+- 구현: `lib/matching/process.ts`(`processReport`, `processItem`), `lib/matching/run.ts`(`matchForReport`, `matchForItem`), `lib/matching/plan.ts`(저장 규칙, 순수 함수). service role로 실행하되 후보 추리기 RPC가 같은 시설로 묶는다.
+- 호출 계기: `createLostReport`, `createFoundItem`, `createSensitiveItem`, `updateFoundItem`(분류·색상·브랜드·비공개 특징·습득 일시·구역이 바뀐 경우), `retryAnalysis`.
+- AI 호출 실패는 HTTP 상태 코드만 로그에 남긴다 (`http_status`). 응답 본문·프롬프트는 남기지 않는다.
+- service role로 쓰는 후보 쿼리에는 모두 `facility_id` 조건을 붙인다. 새 후보를 넣은 직후 신고·습득물이 그사이 닫혔는지 다시 보고, 닫혔으면 방금 넣은 후보를 지운다.
+- 운영 배포(`VERCEL_ENV=production`)에서 `GEMINI_TIER`가 `paid`가 아니면 AI 설정을 읽지 않는다 (ADR-025). 그때는 AI 실패와 같은 길(원문 비교, 중립값, 알림 없음)로 간다.
+- 카드·신분증 분류(`wallet_card.card`, `wallet_card.id`)는 등록·수정 때 서버가 `is_sensitive = true`로 강제한다. [다시 분석]은 민감 물품에 쓰지 않고, 다시 분석한 결과가 민감 물품이면 특징을 채우지 않고 "확인 필요"로 보낸다.
 
 ## 8. 알림 (이메일)
 

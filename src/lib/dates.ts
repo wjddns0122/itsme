@@ -58,3 +58,13 @@ export function formatSeoulFullDate(iso: string): string {
   const [y, m, d] = seoulToday(new Date(iso)).split("-").map(Number);
   return `${y}년 ${m}월 ${d}일`;
 }
+
+/** Seoul calendar day of an instant: "2026-11-25". */
+export function seoulDate(iso: string): string {
+  return seoulToday(new Date(iso));
+}
+
+/** Seoul wall-clock time of an instant: "14:32". */
+export function seoulClock(iso: string): string {
+  return seoulNowLocalInput(new Date(iso)).split("T")[1];
+}

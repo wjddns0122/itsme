@@ -1,17 +1,20 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { after } from "next/server";
+import { z } from "zod";
 import { getAi } from "@/lib/ai/client";
 import { extractFoundItem, type ExtractionResult } from "@/lib/ai/extract";
 import { getAdminContext } from "@/lib/auth/admin";
 import { addDaysToInstant, seoulLocalToIso } from "@/lib/dates";
+import { processItem } from "@/lib/matching/process";
 import { buildSearchText } from "@/lib/matching/search-text";
 import { uploadFoundItemPhoto } from "@/lib/storage";
-import { facilityIdOfPath } from "@/lib/storage-paths";
+import { BUCKETS, facilityIdOfPath } from "@/lib/storage-paths";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
 import type { FoundItemExtraction } from "@/lib/validation/ai";
-import { categoryLabel } from "@/lib/validation/constants";
+import { categoryLabel, isSensitiveCategory } from "@/lib/validation/constants";
 import {
   FoundItemFormSchema,
   ITEM_LIMITS,
@@ -71,7 +74,7 @@ export async function uploadItemPhotos(formData: FormData): Promise<ActionResult
   return { ok: true, data: { photoPaths } };
 }
 
-/** Saves the checked form. Reverse matching runs after the response (FL-031). */
+/** Saves the checked form. Reverse matching runs after the response. */
 export async function createFoundItem(input: FoundItemForm): Promise<ActionResult<{ id: string }>> {
   const parsed = FoundItemFormSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid_input" };
@@ -102,7 +105,7 @@ export async function createFoundItem(input: FoundItemForm): Promise<ActionResul
       features,
       public_summary: form.publicSummary,
       private_features: privateFeatures,
-      is_sensitive: form.isSensitive,
+      is_sensitive: form.isSensitive || isSensitiveCategory(form.category),
       search_text: buildSearchText({ category: form.category, subcategory: form.subcategory, colors: form.colors, brand: form.brand, material, features }, privateFeatures),
       photo_paths: form.photoPaths,
       found_at: foundAt,
@@ -122,6 +125,7 @@ export async function createFoundItem(input: FoundItemForm): Promise<ActionResul
   if (error) return failed("insert", error.code);
 
   await recordRegistered(supabase, facility.id, item.id, userId, { ai_status: aiStatus });
+  after(() => processItem(item.id));
   return { ok: true, data: { id: item.id } };
 }
 
@@ -170,6 +174,7 @@ export async function createSensitiveItem(formData: FormData): Promise<ActionRes
   if (error) return failed("insert_sensitive", error.code);
 
   await recordRegistered(supabase, facility.id, item.id, userId, { ai_status: "skipped", sensitive: true });
+  after(() => processItem(item.id));
   return { ok: true, data: { id: item.id } };
 }
 
@@ -184,7 +189,7 @@ export async function updateFoundItem(input: UpdateItemInput): Promise<ActionRes
   const { userId, facility } = await getAdminContext();
   const supabase = await createClient();
   const [{ data: current, error: readError }, { data: fac, error: facError }] = await Promise.all([
-    supabase.from("found_items").select("features, material, status, category, colors, brand, subcategory, private_features").eq("id", form.id).maybeSingle(),
+    supabase.from("found_items").select("features, material, status, category, colors, brand, subcategory, private_features, found_at, found_area").eq("id", form.id).maybeSingle(),
     supabase.from("facilities").select("transfer_days, areas").eq("id", facility.id).single(),
   ]);
   if (readError || facError) return failed("update_read", readError?.code ?? facError?.code ?? "");
@@ -200,7 +205,7 @@ export async function updateFoundItem(input: UpdateItemInput): Promise<ActionRes
       brand: form.brand,
       public_summary: form.publicSummary,
       private_features: privateFeatures,
-      is_sensitive: form.isSensitive,
+      is_sensitive: form.isSensitive || isSensitiveCategory(form.category),
       search_text: buildSearchText({ category: form.category, subcategory: form.subcategory, colors: form.colors, brand: form.brand, material: current.material, features: current.features }, privateFeatures),
       found_at: foundAt,
       found_area: form.foundArea && fac.areas.includes(form.foundArea) ? form.foundArea : null,
@@ -210,7 +215,7 @@ export async function updateFoundItem(input: UpdateItemInput): Promise<ActionRes
     .eq("id", form.id);
   if (error) return failed("update", error.code);
 
-  // Fields that change what the item looks like; matching re-runs on them once FL-031 lands.
+  // Fields that change what the item looks like (docs/05-ai-matching.md §6).
   const featureChanged =
     current.category !== form.category ||
     current.subcategory !== form.subcategory ||
@@ -222,8 +227,66 @@ export async function updateFoundItem(input: UpdateItemInput): Promise<ActionRes
     .insert({ facility_id: facility.id, found_item_id: form.id, actor: userId, type: "edited", payload: { feature_changed: featureChanged } });
   if (eventError) console.error(JSON.stringify({ event: "item_event_failed", code: eventError.code }));
 
+  // Place and date are scored too, so they also re-run the reverse matching.
+  const foundArea = form.foundArea && fac.areas.includes(form.foundArea) ? form.foundArea : null;
+  if (featureChanged || current.found_area !== foundArea || new Date(current.found_at).getTime() !== new Date(foundAt).getTime()) {
+    after(() => processItem(form.id));
+  }
   refresh();
   return { ok: true, data: { id: form.id } };
+}
+
+/**
+ * A-05 [다시 분석] (FL-032): the photo analysis failed at registration. Fills only the fields the
+ * form does not show (features, material) so nothing the admin typed is overwritten, then matches
+ * again. Sensitive items are never sent to the outside AI.
+ */
+export async function retryAnalysis(input: { id: string }): Promise<ActionResult<{ id: string }>> {
+  const parsed = z.object({ id: z.uuid() }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid_input" };
+  const { id } = parsed.data;
+  const { facility } = await getAdminContext();
+  const supabase = await createClient();
+
+  const [{ data: item, error: readError }, { data: fac, error: facError }] = await Promise.all([
+    supabase.from("found_items").select("ai_status, is_sensitive, photo_paths, found_area, category, subcategory, colors, brand, private_features").eq("id", id).maybeSingle(),
+    supabase.from("facilities").select("type").eq("id", facility.id).single(),
+  ]);
+  if (readError || facError) return failed("retry_read", readError?.code ?? facError?.code ?? "");
+  if (!item) return { ok: false, error: "not_found" };
+  if (item.ai_status !== "failed" || item.is_sensitive || isSensitiveCategory(item.category) || item.photo_paths.length === 0) return { ok: false, error: "conflict" };
+
+  const downloads = await Promise.all(item.photo_paths.map((path) => supabase.storage.from(BUCKETS.foundItems).download(path)));
+  const photos = downloads.flatMap((d) => (d.data ? [d.data] : []));
+  if (photos.length === 0) return failed("retry_download", "download_failed");
+
+  const ai = await runExtraction(photos, fac.type, item.found_area);
+  if (!ai.ok) return { ok: false, error: "ai_failed" };
+  // The model saw a card or an ID: keep its features out and send the item to "확인 필요".
+  const sensitive = ai.extraction.is_sensitive;
+  const features = sensitive ? [] : ai.extraction.features;
+  const material = sensitive ? null : ai.extraction.material;
+  const { confidence } = ai.extraction;
+  const { error } = await supabase
+    .from("found_items")
+    .update({
+      features,
+      material,
+      ...(sensitive ? { is_sensitive: true, review_needed: true } : {}),
+      search_text: buildSearchText({ category: item.category, subcategory: item.subcategory, colors: item.colors, brand: item.brand, material, features }, item.private_features),
+      ai_status: "done",
+      ai_confidence: confidence,
+      ai_model: ai.model,
+      ai_latency_ms: ai.latencyMs,
+      ai_raw: ai.raw as Json,
+    })
+    .eq("id", id)
+    .eq("ai_status", "failed");
+  if (error) return failed("retry_update", error.code);
+
+  after(() => processItem(id));
+  refresh();
+  return { ok: true, data: { id } };
 }
 
 /** A-05 [경찰 이관] / [폐기 처리]: one transaction in set_found_item_status (FL-043). */
@@ -245,7 +308,7 @@ function readPhotos(formData: FormData, min: number): File[] | null {
   return allImages ? files : null;
 }
 
-async function runExtraction(photos: File[], facilityType: string, foundArea: string | null): Promise<ExtractionResult> {
+async function runExtraction(photos: Blob[], facilityType: string, foundArea: string | null): Promise<ExtractionResult> {
   try {
     const { client, env } = getAi();
     const encoded = await Promise.all(

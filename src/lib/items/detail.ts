@@ -19,6 +19,12 @@ export type ItemDetail = {
     id: string;
     status: CandidateStatus;
     high: boolean;
+    /** Admin-only reasons from the similarity judging (docs/05-ai-matching.md §5-4). */
+    matched: string[];
+    conflicts: string[];
+    tie: boolean;
+    infoLow: boolean;
+    judged: boolean;
     report: { id: string; description: string; createdAt: string; status: ReportStatus } | null;
   }[];
   events: { type: string; createdAt: string; byAdmin: boolean; note: string | null }[];
@@ -38,7 +44,7 @@ export async function getItemDetail(id: string): Promise<ItemDetailResult> {
     supabase.from("facilities").select("transfer_days").eq("id", item.facility_id).single(),
     supabase
       .from("match_candidates")
-      .select("id, status, score, report:lost_reports(id, description, created_at, status)")
+      .select("id, status, score, coverage, breakdown, report:lost_reports(id, description, created_at, status)")
       .eq("found_item_id", id)
       .neq("status", "dismissed")
       .order("score", { ascending: false }),
@@ -57,6 +63,8 @@ export async function getItemDetail(id: string): Promise<ItemDetailResult> {
         id: c.id,
         status: c.status,
         high: c.score >= DEFAULT_MATCH_CONFIG.notifyThreshold,
+        ...reasonsOf(c.breakdown),
+        infoLow: c.coverage < DEFAULT_MATCH_CONFIG.coverageMinNotify,
         report: c.report ? { id: c.report.id, description: c.report.description, createdAt: c.report.created_at, status: c.report.status } : null,
       })),
       events: events.data.map((e) => ({
@@ -67,6 +75,12 @@ export async function getItemDetail(id: string): Promise<ItemDetailResult> {
       })),
     },
   };
+}
+
+function reasonsOf(breakdown: unknown): { matched: string[]; conflicts: string[]; tie: boolean; judged: boolean } {
+  const b = (breakdown ?? {}) as Record<string, unknown>;
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : []);
+  return { matched: strings(b.matched), conflicts: strings(b.conflicts), tie: b.tie === true, judged: b.judged !== false };
 }
 
 function noteOf(payload: unknown): string | null {

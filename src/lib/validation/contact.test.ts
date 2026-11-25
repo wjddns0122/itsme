@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeEmail, normalizePhone, toContactKey } from "./contact";
+import { maskContactKey, parseContactSearch, normalizeEmail, normalizePhone, toContactKey } from "./contact";
 
 describe("normalizePhone", () => {
   it("숫자만 남긴다", () => {
@@ -42,5 +42,31 @@ describe("toContactKey", () => {
   it("둘 다 없으면 null", () => {
     expect(toContactKey({})).toBeNull();
     expect(toContactKey({ phone: "", email: "  " })).toBeNull();
+  });
+});
+
+describe("maskContactKey", () => {
+  it("전화번호는 가운데를 가린다", () => {
+    expect(maskContactKey("01012345678")).toBe("010-****-5678");
+  });
+
+  it("이메일은 앞 두 글자만 남긴다", () => {
+    expect(maskContactKey("minji.k@example.com")).toBe("mi***@example.com");
+  });
+});
+
+describe("parseContactSearch", () => {
+  it("숫자 4개는 전화번호 뒷자리로 찾는다", () => {
+    expect(parseContactSearch(" 5678 ")).toEqual({ kind: "suffix", value: "5678" });
+  });
+
+  it("전화번호·이메일 전체는 정규화해서 그대로 찾는다", () => {
+    expect(parseContactSearch("010-1234-5678")).toEqual({ kind: "exact", value: "01012345678" });
+    expect(parseContactSearch("Me@Example.com")).toEqual({ kind: "exact", value: "me@example.com" });
+  });
+
+  it("그 밖의 입력은 null", () => {
+    expect(parseContactSearch("김민지")).toBeNull();
+    expect(parseContactSearch("123")).toBeNull();
   });
 });

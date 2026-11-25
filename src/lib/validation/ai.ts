@@ -24,6 +24,19 @@ export const LostReportNormalizationSchema = ItemDescriptorSchema.extend({
   language: z.string(),
 });
 
+/** §5-4 AI 유사도 판정. `id` is the short key (C1, C2 …) the code maps back to a real id. */
+export const SimilarityJudgementSchema = z.object({
+  results: z.array(
+    z.object({
+      id: z.string(),
+      similarity: z.number(),
+      matched: z.array(z.string()),
+      conflicts: z.array(z.string()),
+    }),
+  ),
+});
+
 export type ItemDescriptor = z.infer<typeof ItemDescriptorSchema>;
 export type FoundItemExtraction = z.infer<typeof FoundItemExtractionSchema>;
 export type LostReportNormalization = z.infer<typeof LostReportNormalizationSchema>;
+export type SimilarityJudgement = z.infer<typeof SimilarityJudgementSchema>;

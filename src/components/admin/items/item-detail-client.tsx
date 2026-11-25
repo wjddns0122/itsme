@@ -6,7 +6,7 @@ import { ItemForm } from "@/components/admin/register/item-form";
 import type { RegisterValues } from "@/components/admin/register/register-state";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
-import { setFoundItemStatus, updateFoundItem } from "@/server/actions/items";
+import { retryAnalysis, setFoundItemStatus, updateFoundItem } from "@/server/actions/items";
 import ko from "../../../../messages/ko.json";
 
 const t = ko.admin.item;
@@ -145,6 +145,28 @@ export function ItemStatusActions({ id }: { id: string }) {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Photo analysis failed at registration (FL-032): banner with [다시 분석]. */
+export function RetryAnalysis({ id }: { id: string }) {
+  const [failed, setFailed] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const run = () =>
+    startTransition(async () => {
+      const result = await retryAnalysis({ id });
+      setFailed(!result.ok);
+    });
+
+  return (
+    <div role="status" className="flex flex-wrap items-center gap-3 rounded-ui-md bg-warn-bg px-4 py-3">
+      <Icon name="alert-circle" size={18} />
+      <p className="min-w-0 flex-1 text-desc text-ink">{failed ? t.retryFailed : t.aiFailed}</p>
+      <button type="button" disabled={pending} onClick={run} className="flex h-11 items-center gap-1.5 rounded-ui-sm border border-line-strong bg-surface px-4 text-button font-bold text-ink disabled:opacity-85">
+        {pending ? <Icon name="spinner" size={16} className="animate-spin" /> : null}
+        {t.retryAnalysis}
+      </button>
     </div>
   );
 }

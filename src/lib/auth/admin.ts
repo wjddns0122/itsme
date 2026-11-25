@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { cache } from "react";
 import { ADMIN_LOGIN, LOGIN_ERROR_NO_FACILITY } from "@/lib/admin/routes";
 import { createClient } from "@/lib/supabase/server";
@@ -22,6 +23,9 @@ export type AdminContext = {
  * Reads cookies: call it inside a <Suspense> boundary.
  */
 export const getAdminContext = cache(async (): Promise<AdminContext> => {
+  // Session checks read the clock (token expiry), which partial prefetching cannot prerender.
+  // Admin data is never prefetched anyway, so this always runs at request time.
+  await connection();
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const userId = auth?.claims?.sub;

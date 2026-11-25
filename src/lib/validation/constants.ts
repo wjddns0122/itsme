@@ -70,3 +70,17 @@ export function categoryGroupLabel(code: string): string {
   const group = categoryGroup(code);
   return CATEGORY_GROUPS.find((g) => g.group === group)?.label ?? "기타";
 }
+
+/** Label for a category code or a bare group code ("sports" from the P-03 chips). */
+export function categoryOrGroupLabel(code: string): string {
+  const leaf = CATEGORIES.find((c) => c.code === code);
+  if (leaf) return leaf.label;
+  return CATEGORY_GROUPS.find((g) => g.group === code)?.label ?? "기타";
+}
+
+const SENSITIVE = new Set<string>(CATEGORIES.filter((c) => c.sensitive).map((c) => c.code));
+
+/** Cards and IDs are always sensitive, whatever the switch says (.claude/rules/ai.md). */
+export function isSensitiveCategory(code: string): boolean {
+  return SENSITIVE.has(code);
+}

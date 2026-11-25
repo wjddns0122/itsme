@@ -15,8 +15,16 @@ export type AiEnv = z.infer<typeof AiEnvSchema>;
 export const FREE_TIER_WARNING =
   "[ai] GEMINI_TIER=free: Google may use inputs to improve its products. Send team test data only, never real reports or photos (ADR-025).";
 
+/**
+ * Reads the AI settings. On the production deployment a free-tier key is refused (ADR-025): callers
+ * then take the "AI unavailable" path (raw text, neutral similarity) instead of sending real reports.
+ */
 export function readAiEnv(source: Record<string, string | undefined> = process.env): AiEnv {
-  return AiEnvSchema.parse(source);
+  const env = AiEnvSchema.parse(source);
+  if (source.VERCEL_ENV === "production" && env.GEMINI_TIER !== "paid") {
+    throw new Error("GEMINI_TIER must be paid in production (ADR-025)");
+  }
+  return env;
 }
 
 let cached: { client: GoogleGenAI; env: AiEnv } | null = null;

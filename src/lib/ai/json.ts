@@ -92,9 +92,18 @@ export async function generateJson<S extends z.ZodType>(opts: GenerateJsonOption
       });
       if (result.ok) return { ok: true, data: result.data, attempts: attempt, usage: response.usageMetadata ?? null };
       lastError = result.error;
-    } catch {
+    } catch (error) {
       lastError = "request_failed";
-      logAiCall({ kind: opts.kind, model: opts.model, attempt, latency_ms: Date.now() - started, ok: false, error: lastError });
+      const status = (error as { status?: unknown } | null)?.status;
+      logAiCall({
+        kind: opts.kind,
+        model: opts.model,
+        attempt,
+        latency_ms: Date.now() - started,
+        ok: false,
+        error: lastError,
+        ...(typeof status === "number" ? { http_status: status } : {}),
+      });
     }
   }
   return { ok: false, error: lastError, attempts: MAX_ATTEMPTS };

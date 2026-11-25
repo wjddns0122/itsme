@@ -328,7 +328,119 @@
       },
       "notFound": "습득물을 찾을 수 없어요.",
       "saved": "저장했어요.",
-      "failed": "처리하지 못했어요. 잠시 후 다시 시도해 주세요."
+      "failed": "처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      "aiFailed": "사진 분석에 실패했어요. 다시 분석하면 특징을 채우고 매칭을 다시 해요.",
+      "retryAnalysis": "다시 분석",
+      "retryFailed": "분석하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      "reasons": {
+        "matched": "맞는 특징",
+        "conflicts": "다른 점",
+        "tie": "비슷한 물건이 여러 개예요",
+        "infoLow": "정보가 적어요",
+        "unjudged": "자동 비교를 하지 못했어요"
+      }
+    },
+    "reports": {
+      "title": "분실 신고",
+      "count": "{n}건",
+      "proxyReport": "대리 신고 접수",
+      "contactLabel": "연락처로 찾기",
+      "contactPlaceholder": "전화번호 뒷자리 4개 또는 이메일",
+      "contactInvalid": "전화번호 뒷자리 4개나 전화번호 전체, 이메일로 찾을 수 있어요.",
+      "filterStatus": "상태",
+      "filterVia": "접수 경로",
+      "filterPeriod": "기간",
+      "sort": "정렬",
+      "all": "전체",
+      "via": {
+        "web": "QR",
+        "admin": "대리"
+      },
+      "viaFilter": {
+        "web": "QR·링크",
+        "admin": "대리 신고"
+      },
+      "periods": {
+        "7": "최근 7일",
+        "30": "최근 30일",
+        "90": "최근 90일",
+        "all": "전체 기간"
+      },
+      "sorts": {
+        "latest": "최신순",
+        "oldest": "오래된순"
+      },
+      "columns": {
+        "createdAt": "신고일",
+        "firstLine": "설명 첫 줄",
+        "period": "분실 기간",
+        "status": "상태",
+        "candidates": "후보",
+        "via": "경로",
+        "inquiries": "문의"
+      },
+      "sameContact": "같은 분 신고 {n}건",
+      "inquiryCount": "문의 {n}회",
+      "inquiryTimes": "{n}회",
+      "latest": "최근 {date}",
+      "empty": "아직 분실 신고가 없어요. 시설 페이지 링크를 알리면 분실자가 직접 신고해요.",
+      "noResult": "이 연락처로 받은 신고가 없어요. 대리 신고로 접수할까요?",
+      "loadError": "신고 목록을 불러오지 못했어요.",
+      "retry": "다시 시도",
+      "range": "{from}–{to} / {total}건",
+      "prev": "이전 쪽",
+      "next": "다음 쪽",
+      "drawer": {
+        "title": "신고 상세",
+        "close": "닫기",
+        "content": "신고 내용",
+        "period": "분실 기간",
+        "area": "구역",
+        "areaUnknown": "모름",
+        "contact": "연락처",
+        "secret": "나만 아는 특징",
+        "candidates": "후보 {n}",
+        "noCandidates": "아직 후보가 없어요.",
+        "inquiries": "문의 기록",
+        "noInquiries": "아직 문의 기록이 없어요.",
+        "channels": {
+          "phone": "전화",
+          "visit": "방문",
+          "message": "메시지",
+          "other": "기타"
+        },
+        "copyLink": "신고 링크 복사",
+        "copied": "복사했어요",
+        "aiFailed": "설명 정리에 실패해서 원문으로 비교했어요.",
+        "retry": "다시 분석",
+        "retryFailed": "분석하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        "notFound": "신고를 찾을 수 없어요."
+      },
+      "new": {
+        "back": "분실 신고 목록",
+        "title": "대리 신고 접수",
+        "what": "무엇을 잃어버렸나요?",
+        "description": "설명",
+        "when": "언제, 어디서 잃어버렸나요?",
+        "period": "분실 기간",
+        "from": "시작 날짜",
+        "to": "끝 날짜",
+        "area": "구역",
+        "areaUnknown": "잘 모르겠어요",
+        "contact": "연락받을 곳",
+        "secretHint": "관리자만 볼 수 있어요.",
+        "consent": "분실물 반환을 위해 연락처를 수집해요. 신고가 끝나고 30일 뒤 삭제해요.",
+        "consentHint": "분실자에게 위 내용을 알리고 동의를 받았을 때 체크해 주세요.",
+        "cancel": "취소",
+        "submit": "신고하기",
+        "done": "신고를 접수했어요.",
+        "link": "신고 링크",
+        "copy": "복사",
+        "copied": "복사했어요",
+        "linkHint": "전화로 불러주거나 문자로 보내 주세요.",
+        "toList": "분실 신고 목록으로",
+        "failed": "신고를 접수하지 못했어요. 잠시 후 다시 시도해 주세요."
+      }
     }
   },
   "facilityTypes": {
@@ -353,5 +465,11 @@
     "approved": "승인됨",
     "rejected": "거절됨",
     "dismissed": "숨김"
+  },
+  "reportStatus": {
+    "open": "찾는 중",
+    "claimed": "확인 요청 중",
+    "resolved": "반환 완료",
+    "closed": "종료"
   }
 }

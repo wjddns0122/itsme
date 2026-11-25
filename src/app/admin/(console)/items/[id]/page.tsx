@@ -1,7 +1,7 @@
 // A-05 습득물 상세
 import Link from "next/link";
 import { Suspense } from "react";
-import { ItemInfoCard, ItemStatusActions, PhotoViewer } from "@/components/admin/items/item-detail-client";
+import { ItemInfoCard, ItemStatusActions, PhotoViewer, RetryAnalysis } from "@/components/admin/items/item-detail-client";
 import type { RegisterValues } from "@/components/admin/register/register-state";
 import { CandidateStatusBadge, CountBadge, ItemStatusBadge, SimilarityBadge } from "@/components/admin/status-badge";
 import { getAdminContext } from "@/lib/auth/admin";
@@ -51,6 +51,8 @@ async function Detail({ params }: Pick<PageProps<"/admin/items/[id]">, "params">
         {open ? <ItemStatusActions id={item.id} /> : null}
       </div>
 
+      {item.ai_status === "failed" && !item.is_sensitive && item.photo_paths.length > 0 ? <RetryAnalysis id={item.id} /> : null}
+
       <div className="flex flex-col gap-5 md:flex-row md:items-start">
         <div className="md:w-[280px] md:shrink-0">
           <PhotoViewer photos={detail.photos} />
@@ -70,11 +72,14 @@ async function Detail({ params }: Pick<PageProps<"/admin/items/[id]">, "params">
         ) : (
           <ul>
             {detail.candidates.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-3">
-                <span className="min-w-0 flex-1 truncate text-body text-ink">{c.report?.description.split("\n")[0] || "—"}</span>
-                <SimilarityBadge high={c.high} />
-                {c.report ? <span className="text-caption font-medium text-ink-muted">{formatMonthDay(foundDay(c.report.createdAt))}</span> : null}
-                <CandidateStatusBadge status={c.status} />
+              <li key={c.id} className="flex flex-col gap-1 border-t border-line px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-body text-ink">{c.report?.description.split("\n")[0] || "—"}</span>
+                  <SimilarityBadge high={c.high} />
+                  {c.report ? <span className="text-caption font-medium text-ink-muted">{formatMonthDay(foundDay(c.report.createdAt))}</span> : null}
+                  <CandidateStatusBadge status={c.status} />
+                </div>
+                <CandidateReasons candidate={c} />
               </li>
             ))}
           </ul>
@@ -100,6 +105,21 @@ async function Detail({ params }: Pick<PageProps<"/admin/items/[id]">, "params">
         </ol>
       </section>
     </>
+  );
+}
+
+/** Why the two look alike (admin only): matched and conflicting features, look-alikes, little information. */
+function CandidateReasons({ candidate: c }: { candidate: ItemDetail["candidates"][number] }) {
+  const r = t.reasons;
+  const notes = [c.tie ? r.tie : null, c.infoLow ? r.infoLow : null, c.judged ? null : r.unjudged].filter(Boolean).join(" · ");
+  if (c.matched.length === 0 && c.conflicts.length === 0 && !notes) return null;
+  return (
+    <p className="text-caption font-medium text-ink-muted">
+      {c.matched.length > 0 ? `${r.matched}: ${c.matched.join(", ")}` : null}
+      {c.matched.length > 0 && c.conflicts.length > 0 ? " · " : null}
+      {c.conflicts.length > 0 ? <span className="text-danger">{`${r.conflicts}: ${c.conflicts.join(", ")}`}</span> : null}
+      {notes ? `${c.matched.length + c.conflicts.length > 0 ? " · " : ""}${notes}` : null}
+    </p>
   );
 }
 

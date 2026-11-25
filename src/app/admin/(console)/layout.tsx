@@ -7,6 +7,9 @@ import { AppIcon } from "@/components/app-icon";
 import { Icon } from "@/components/icon";
 import ko from "../../../../messages/ko.json";
 
+// Matching runs in after() on this route (docs/04-architecture.md §7).
+export const maxDuration = 60;
+
 // 관리자 공통 레이아웃 (docs/03-screens.md §4): left menu, facility name and logout on top,
 // bottom tabs below 768px. Session reads stay inside <Suspense> (cacheComponents).
 export default function AdminConsoleLayout({ children }: LayoutProps<"/admin">) {

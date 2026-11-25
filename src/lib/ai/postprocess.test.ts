@@ -25,6 +25,14 @@ describe("maskPersonalInfo", () => {
     expect(maskPersonalInfo("033-000-0000")).toBe("***");
   });
 
+  it("점·공백·빗금으로 끊은 전화번호와 띄어 쓴 이메일도 가린다", () => {
+    expect(maskPersonalInfo("연락은 010.1234.5678로")).toBe("연락은 ***로");
+    expect(maskPersonalInfo("010 - 1234 - 5678")).toBe("***");
+    expect(maskPersonalInfo("010/1234/5678")).toBe("***");
+    expect(maskPersonalInfo("(02)123-4567")).toBe("***");
+    expect(maskPersonalInfo("abc @ gmail.com 으로")).toBe("*** 으로");
+  });
+
   it("짧은 숫자는 그대로 둔다 (보관함 번호, 연도 등)", () => {
     expect(maskPersonalInfo("보관함 A-03, 2026년")).toBe("보관함 A-03, 2026년");
   });
