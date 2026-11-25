@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { isPhotoPublic } from "@/lib/reports/view";
 import { signPhotoUrls } from "@/lib/storage";
 import { BUCKETS } from "@/lib/storage-paths";
 import { createClient } from "@/lib/supabase/server";
@@ -74,6 +75,8 @@ export type ClaimDetail = {
     privateFeatures: string[];
     storageLocation: string | null;
     photoUrl: string | null;
+    /** The person saw this item's first photo on P-04 (ADR-030): features visible in it prove little. */
+    photoShownToReporter: boolean;
     requiredProof: RequiredProof;
   };
   warnings: { otherRequests: number; contactRecentItems: number };
@@ -85,7 +88,7 @@ export async function getClaimDetail(id: string): Promise<{ status: "ok"; detail
   const { data: c, error } = await supabase
     .from("match_candidates")
     .select(
-      "id, status, claimed_at, claim_attempt, claim_answers, claim_photo_path, proof_request, proof_reply, proof_photo_path, review_note, pickup_message, ai_verdict, found_item_id, report:lost_reports(id, description, secret_detail, contact_name, contact_email, contact_phone, contact_key), item:found_items(id, category, public_summary, private_features, storage_location, photo_paths)",
+      "id, status, claimed_at, claim_attempt, claim_answers, claim_photo_path, proof_request, proof_reply, proof_photo_path, review_note, pickup_message, ai_verdict, found_item_id, report:lost_reports(id, description, secret_detail, contact_name, contact_email, contact_phone, contact_key), item:found_items(id, category, public_summary, private_features, storage_location, photo_paths, is_sensitive, ai_status, review_needed)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -130,6 +133,7 @@ export async function getClaimDetail(id: string): Promise<{ status: "ok"; detail
         privateFeatures: c.item.private_features,
         storageLocation: c.item.storage_location,
         photoUrl: c.item.photo_paths[0] ? (itemPhotos.get(c.item.photo_paths[0]) ?? null) : null,
+        photoShownToReporter: c.item.photo_paths.length > 0 && isPhotoPublic(c.item),
         requiredProof: requiredProofFor(c.item.category),
       },
       warnings: {

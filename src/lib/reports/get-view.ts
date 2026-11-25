@@ -19,7 +19,7 @@ export const getReportView = cache(async (token: string): Promise<ReportViewResu
   const { data: report, error } = await supabase
     .from("lost_reports")
     .select(
-      "id, description, user_category, lost_from, lost_to, lost_area, lost_time_of_day, is_rental, status, created_at, ai_status, facility:facilities(name, slug, desk_location, hours, contact_phone, pickup_guide)",
+      "id, facility_id, description, user_category, lost_from, lost_to, lost_area, lost_time_of_day, is_rental, status, created_at, ai_status, facility:facilities(name, slug, desk_location, hours, contact_phone, pickup_guide)",
     )
     .eq("access_token", token)
     .maybeSingle();
@@ -29,15 +29,16 @@ export const getReportView = cache(async (token: string): Promise<ReportViewResu
   const { data: candidates, error: candidateError } = await supabase
     .from("match_candidates")
     .select(
-      "id, status, score, coverage, pickup_message, proof_request, item:found_items(category, subcategory, public_summary, found_at, found_area, is_sensitive, photo_paths)",
+      "id, status, score, coverage, pickup_message, proof_request, item:found_items(category, subcategory, public_summary, found_at, found_area, is_sensitive, photo_paths, facility_id, ai_status, review_needed)",
     )
     .eq("lost_report_id", report.id)
     .in("status", [...VISIBLE_CANDIDATE_STATUSES]);
   if (candidateError) return failed("candidates", candidateError.code);
 
-  // Only the first photo of shown, non-sensitive candidates, as 10-minute signed URLs (ADR-030).
+  // ADR-030: one 10-minute signed URL per shown candidate that passes isPhotoPublic, only for
+  // items and paths of this report's facility (the service role would sign anything).
   // Signing failures leave the map empty and the card falls back to the category icon.
-  const photoUrls = await signPhotoUrls(supabase, BUCKETS.foundItems, candidatePhotoPaths(candidates));
+  const photoUrls = await signPhotoUrls(supabase, BUCKETS.foundItems, candidatePhotoPaths(candidates, report.facility_id));
 
   // toReportView copies only the allowlisted fields out of these rows.
   return { status: "ok", view: toReportView(report, report.facility, candidates, photoUrls) };

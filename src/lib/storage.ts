@@ -25,8 +25,9 @@ export async function uploadPhoto(client: Client, bucket: BucketName, path: stri
 }
 
 /**
- * 10-minute signed URLs for admin screens, keyed by path. Paths the caller may not read
- * (another facility's folder) are simply missing from the result.
+ * 10-minute signed URLs keyed by path. With an admin's own client, paths they may not read
+ * (another facility's folder) are simply missing from the result. With the service role every
+ * path is signed, so the caller must pick the paths itself (getReportView, ADR-030).
  */
 export async function signPhotoUrls(client: Client, bucket: BucketName, paths: readonly string[]): Promise<Map<string, string>> {
   if (paths.length === 0) return new Map();
