@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { InquiryButton } from "@/components/admin/inquiry-dialog";
 import { CopyPathButton, ReportFilters, RetryReportAnalysis } from "@/components/admin/reports/report-client";
 import { ReportStatusBadge, SameContactBadge, SimilarityBadge, ViaBadge } from "@/components/admin/status-badge";
 import { Icon } from "@/components/icon";
@@ -257,10 +258,9 @@ function DrawerBody({ detail: r }: { detail: Extract<Awaited<ReturnType<typeof g
           )}
         </section>
       </div>
-      <div className="flex gap-2 border-t border-line px-5 py-4">
-        <div className="flex-1 [&>button]:w-full">
-          <CopyPathButton path={r.accessPath} label={d.copyLink} copiedLabel={d.copied} primary />
-        </div>
+      <div className="grid grid-cols-2 gap-2 border-t border-line px-5 py-4 [&>button]:w-full">
+        <InquiryButton reportId={r.id} className="border-0 bg-brand text-on-brand [&_img]:hidden" />
+        <CopyPathButton path={r.accessPath} label={d.copyLink} copiedLabel={d.copied} />
       </div>
     </>
   );

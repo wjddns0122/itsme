@@ -194,7 +194,37 @@
     "brand": "잇츠미",
     "home": {
       "title": "대시보드",
-      "description": "습득물 등록과 관리 화면은 준비 중이에요."
+      "description": "습득물 등록과 관리 화면은 준비 중이에요.",
+      "inquiry": "문의 기록",
+      "kpi": {
+        "stored": "보관 중",
+        "storedSub": "오늘 +{n}",
+        "pending": "확인 요청 대기",
+        "pendingSub": "가장 오래된 요청 {wait}",
+        "pendingNone": "기다리는 요청 없음",
+        "returned": "이번 달 반환",
+        "returnedSub": "지난달 {n}",
+        "rate": "이번 달 반환율",
+        "rateSub": "반환 {r} / 습득 {f}",
+        "rateNone": "—",
+        "inquiries": "이번 주 문의",
+        "inquiriesSub": "전화 {phone} · 방문 {visit}"
+      },
+      "todoClaims": "확인 요청 대기",
+      "todoClaim": "{category} 확인 요청",
+      "noName": "이름 없음",
+      "todoWait": "{name} · {wait} 대기",
+      "todoDue": "이관 기한 3일 이내",
+      "dueOn": "이관 기한 {date}",
+      "todoNone": "할 일이 없어요.",
+      "chart": "최근 7일 습득·반환",
+      "found": "습득",
+      "returnedLegend": "반환",
+      "today": "오늘",
+      "dayLabel": "{d}일",
+      "empty": "아직 등록한 습득물이 없어요. 첫 습득물을 등록해 보세요.",
+      "loadError": "대시보드를 불러오지 못했어요.",
+      "retry": "다시 시도"
     },
     "login": {
       "title": "잇츠미 관리자",
@@ -582,6 +612,31 @@
       "failed": "반환 처리를 하지 못했어요. 잠시 후 다시 시도해 주세요.",
       "done": "반환 완료했어요.",
       "strictHint": "이 분류는 잠금 해제, 일련번호, 신분증 확인 중 하나로 확인해요."
+    },
+    "inquiry": {
+      "title": "문의 기록",
+      "channel": "채널",
+      "channels": {
+        "phone": "전화",
+        "visit": "방문",
+        "message": "메시지",
+        "other": "기타"
+      },
+      "contact": "연락처",
+      "contactPlaceholder": "전화번호 또는 이메일 (같은 분 신고에 자동 연결)",
+      "linked": "연결할 신고",
+      "note": "메모",
+      "notePlaceholder": "예) 고글 찾았는지 문의, 후보 확인 중이라고 안내",
+      "save": "기록",
+      "cancel": "취소",
+      "close": "닫기",
+      "saved": "문의를 기록했어요.",
+      "noReport": "이 연락처로 들어온 신고가 없어요. 대리 신고를 접수할까요?",
+      "toProxy": "대리 신고 접수",
+      "copyLink": "신고 링크 복사",
+      "copied": "복사했어요",
+      "needContact": "연락처를 적거나 신고에서 기록해 주세요.",
+      "failed": "기록하지 못했어요. 잠시 후 다시 시도해 주세요."
     }
   },
   "facilityTypes": {
