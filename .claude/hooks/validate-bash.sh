@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse(Bash) guard for FindLink.
+# PreToolUse(Bash) guard for 잇츠미.
 # Reads the hook JSON on stdin. Exit 2 blocks the command; stderr is shown to Claude.
 # Parses JSON with node (always present in this project) so teammates don't need jq.
 set -uo pipefail

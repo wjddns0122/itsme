@@ -1,6 +1,6 @@
 ---
 name: prompt-change
-description: FindLink의 AI 프롬프트, AI 출력 스키마, 분류·색상 목록, 매칭 가중치·임계값을 바꿀 때 쓴다. 평가로 전후를 비교하고 docs/05-ai-matching.md 변경 기록을 남기는 절차.
+description: 잇츠미의 AI 프롬프트, AI 출력 스키마, 분류·색상 목록, 매칭 가중치·임계값을 바꿀 때 쓴다. 평가로 전후를 비교하고 docs/05-ai-matching.md 변경 기록을 남기는 절차.
 ---
 
 # 프롬프트·매칭 값 변경 절차

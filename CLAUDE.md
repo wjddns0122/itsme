@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# CLAUDE.md — FindLink 개발 규칙
+# CLAUDE.md — 잇츠미 개발 규칙
 
 AI 코딩 에이전트(Claude Code 등)가 이 저장소에서 작업할 때 따르는 규칙이다.
 위의 `AGENTS.md`는 Next.js가 관리하는 파일이다 (`next dev`가 다시 써넣는다). 직접 고치지 않는다.

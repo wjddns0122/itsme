@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "FindLink",
+    "name": "잇츠미",
     "slogan": "잃어버린 물건과 주인을 AI로 다시 연결합니다."
   },
   "public": {
@@ -11,7 +11,7 @@
   },
   "admin": {
     "home": {
-      "title": "FindLink 관리자",
+      "title": "잇츠미 관리자",
       "description": "습득물 등록과 관리 화면은 준비 중이에요."
     }
   }

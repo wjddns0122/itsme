@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: FindLink를 Vercel에 배포하기 전 점검과 배포 후 확인 절차. 사람이 /deploy로 부를 때만 쓴다.
+description: 잇츠미를 Vercel에 배포하기 전 점검과 배포 후 확인 절차. 사람이 /deploy로 부를 때만 쓴다.
 disable-model-invocation: true
 ---
 

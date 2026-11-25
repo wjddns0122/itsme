@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse(Edit|Write) guard for FindLink.
+# PreToolUse(Edit|Write) guard for 잇츠미.
 # Exit 2 blocks the edit; stderr is shown to Claude.
 set -uo pipefail
 

@@ -1,6 +1,6 @@
 ---
 name: supabase-migration
-description: FindLink DB 스키마를 바꿀 때 쓴다 (테이블·컬럼·enum·인덱스·RLS 정책·DB 함수 추가나 변경). 마이그레이션 파일 생성부터 RLS 점검, 타입 재생성, 문서 동기화까지의 절차.
+description: 잇츠미 DB 스키마를 바꿀 때 쓴다 (테이블·컬럼·enum·인덱스·RLS 정책·DB 함수 추가나 변경). 마이그레이션 파일 생성부터 RLS 점검, 타입 재생성, 문서 동기화까지의 절차.
 ---
 
 # Supabase 마이그레이션 절차

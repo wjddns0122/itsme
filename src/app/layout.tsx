@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FindLink",
+  title: "잇츠미",
   description: "잃어버린 물건과 주인을 AI로 다시 연결합니다.",
 };
 

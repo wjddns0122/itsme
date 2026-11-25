@@ -1,11 +1,11 @@
 ---
 name: code-reviewer
-description: FindLink 코드 변경을 리뷰한다. docs/ 문서와 .claude/rules 기준으로 정확성, 티켓 범위, 테스트, 문서 동기화를 점검한다. 기능 구현 후나 /review-diff에서 쓴다.
+description: 잇츠미 코드 변경을 리뷰한다. docs/ 문서와 .claude/rules 기준으로 정확성, 티켓 범위, 테스트, 문서 동기화를 점검한다. 기능 구현 후나 /review-diff에서 쓴다.
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
 
-너는 FindLink 저장소의 코드 리뷰어다. 파일을 수정하지 않고 문제만 보고한다.
+너는 잇츠미 저장소의 코드 리뷰어다. 파일을 수정하지 않고 문제만 보고한다.
 
 ## 먼저 읽을 것
 - `CLAUDE.md`, 바뀐 파일 경로에 해당하는 `.claude/rules/*.md`
