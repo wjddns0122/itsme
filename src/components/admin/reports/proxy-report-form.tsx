@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition, type ReactNode } from "react";
 import { CopyPathButton } from "@/components/admin/reports/report-client";
 import { Icon } from "@/components/icon";
+import { useOrigin } from "@/components/use-origin";
 import { CheckBox, ChipButton, ChipRow, FieldError, inputClass } from "@/components/public/report/controls";
 import { cn } from "@/lib/utils";
 import { REPORT_CATEGORY_CHIPS, type LostReportInput, type ReportFieldError } from "@/lib/validation/report";
@@ -173,7 +174,7 @@ function TextField({ label, value, onChange, type = "text", placeholder, invalid
 
 /** Figma 25:4493: the link to read out on the phone or send by text. */
 function Done({ path }: { path: string }) {
-  const [origin] = useState(() => (typeof window === "undefined" ? "" : window.location.origin));
+  const origin = useOrigin();
   return (
     <section className="flex flex-col items-center gap-4 rounded-ui-lg border border-line bg-surface px-6 py-8">
       <span className="flex size-14 items-center justify-center rounded-ui-pill bg-ok-bg text-ok">
