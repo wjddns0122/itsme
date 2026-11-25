@@ -468,12 +468,12 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [ ] `eval/results/YYYY-MM-DD.md` 저장
 - 참고: `05-ai-matching.md` §7
 
-### FL-082 · 소요시간 지표
+### FL-082 · 소요시간 지표 ✅ (값은 파일럿·사용성 테스트 때 채움)
 - P0 · 1h · 의존 FL-012, FL-021
 - 수용 기준
-  - [ ] 등록·신고 소요시간 중앙값·p90을 뽑는 SQL (`scripts/metrics.sql`)
-  - [ ] 하루 문의 수, 같은 분 재문의 수 SQL (`inquiries`)
-  - [ ] 사용성 테스트 결과를 같은 형식으로 기록하는 표 (`eval/usability.md`)
+  - [x] 등록·신고 소요시간 중앙값·p90을 뽑는 SQL (`scripts/metrics.sql`, 30분 넘는 값은 측정에서 뺌)
+  - [x] 하루 문의 수, 같은 분 재문의 수 SQL (`inquiries`)
+  - [x] 사용성 테스트 결과를 같은 형식으로 기록하는 표 (`eval/usability.md`)
 - 참고: `01-prd.md` §7, `04-architecture.md` §10
 
 ---
