@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Icon } from "@/components/icon";
@@ -268,7 +269,7 @@ export function RegisterItem({ facilityId, areas, nowLocal }: Props) {
           ) : phase === "analyzing" ? (
             <div role="status" className="flex flex-col gap-4 rounded-ui-md border border-line bg-surface p-5">
               <p className="flex items-center gap-2 text-body leading-[1.5] font-bold text-ink">
-                <Icon name="spinner" size={18} className="animate-spin" />
+                <Image src="/brand/mascot-magnifier.png" alt="" width={72} height={51} className="h-[46px] w-16 object-contain md:h-[51px] md:w-[72px]" />
                 {t.analyzing}
               </p>
               {[0, 1, 2, 3].map((i) => (

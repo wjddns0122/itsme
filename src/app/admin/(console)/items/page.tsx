@@ -164,7 +164,11 @@ function Thumb({ url }: { url: string | null }) {
 function EmptyState({ searching }: { searching: boolean }) {
   return (
     <section className="flex flex-col items-center gap-3 rounded-ui-md border border-line bg-surface px-4 py-10 text-center">
-      <Image src={searching ? "/brand/mascot-curious.png" : "/brand/mascot-happy.png"} alt="" width={130} height={100} className="h-[100px] w-[130px] object-contain" />
+      {searching ? (
+        <Image src="/brand/mascot-curious.png" alt="" width={130} height={100} className="h-[100px] w-[130px] object-contain" />
+      ) : (
+        <Image src="/brand/mascot-main.png" alt="" width={160} height={124} className="h-[124px] w-40 object-contain" />
+      )}
       <p className="text-body leading-[1.5] font-bold text-ink">{searching ? t.noResult : t.empty}</p>
       <Link
         href={searching ? "/admin/reports/new" : "/admin/items/new"}

@@ -67,10 +67,10 @@ async function ReportStatus({ params, searchParams }: Pick<PageProps<"/r/[token]
       {phase === "analyzing" ? (
         <>
           <AutoRefresh everyMs={REFRESH_WHILE_ANALYZING_MS} />
-          <StateNote image="/brand/mascot-laptop.png" text={t.analyzing} live />
+          <StateNote image={MASCOT.magnifier} text={t.analyzing} live />
         </>
       ) : null}
-      {phase === "empty" ? <StateNote image="/brand/mascot-curious.png" text={t.empty} /> : null}
+      {phase === "empty" ? <StateNote image={MASCOT.sleeping} text={t.empty} sub={t.emptySub} /> : null}
       {phase === "closed" ? <StateNote image="/brand/mascot-curious.png" text={t.cancelled} /> : null}
       {phase === "approved" ? <Approved view={view} /> : null}
       {phase === "claimed" || phase === "needs_proof" ? <ClaimInProgress view={view} phase={phase} token={token} /> : null}
@@ -122,11 +122,21 @@ function ReportSummary({ view }: { view: ReportView }) {
   );
 }
 
-function StateNote({ image, text, live }: { image: string; text: string; live?: boolean }) {
+type Mascot = { src: string; width: number; height: number };
+
+/** Poses and sizes from Figma P-04 (4:250 찾는 중, 4:268 후보 없음); other states keep the 130×100 slot. */
+const MASCOT = {
+  magnifier: { src: "/brand/mascot-magnifier.png", width: 170, height: 121 },
+  sleeping: { src: "/brand/mascot-sleeping.png", width: 170, height: 107 },
+} satisfies Record<string, Mascot>;
+
+function StateNote({ image, text, sub, live }: { image: string | Mascot; text: string; sub?: string; live?: boolean }) {
+  const m = typeof image === "string" ? { src: image, width: 130, height: 100 } : image;
   return (
-    <section role={live ? "status" : undefined} className="flex flex-col items-center gap-2.5 pt-4 text-center">
-      <Image src={image} alt="" width={130} height={100} className="h-[100px] w-[130px] object-contain" />
+    <section role={live ? "status" : undefined} className="flex flex-col items-center gap-2 pt-3.5 text-center">
+      <Image src={m.src} alt="" width={m.width} height={m.height} style={{ width: m.width, height: m.height }} className="object-contain" />
       <p className="text-body leading-[1.5] font-bold text-ink">{text}</p>
+      {sub ? <p className="text-desc text-ink-muted">{sub}</p> : null}
     </section>
   );
 }

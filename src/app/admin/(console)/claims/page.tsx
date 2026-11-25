@@ -48,7 +48,7 @@ async function ClaimList() {
       </div>
       {result.rows.length === 0 ? (
         <section className="flex flex-col items-center gap-3 rounded-ui-md border border-line bg-surface px-4 py-10 text-center">
-          <Image src="/brand/mascot-happy.png" alt="" width={130} height={100} className="h-[100px] w-[130px] object-contain" />
+          <Image src="/brand/mascot-sleeping.png" alt="" width={160} height={100} className="h-[100px] w-40 object-contain" />
           <p className="text-body leading-[1.5] font-bold text-ink">{t.empty}</p>
         </section>
       ) : (

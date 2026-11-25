@@ -52,7 +52,7 @@ async function DashboardBody() {
   if (data.empty) {
     return (
       <section className="flex flex-col items-center gap-3 rounded-ui-md border border-line bg-surface px-4 py-10 text-center">
-        <Image src="/brand/mascot-happy.png" alt="" width={130} height={100} className="h-[100px] w-[130px] object-contain" />
+        <Image src="/brand/mascot-main.png" alt="" width={170} height={132} className="h-[132px] w-[170px] object-contain" />
         <p className="text-body leading-[1.5] font-bold text-ink">{t.empty}</p>
         <Link href="/admin/items/new" className="flex h-11 items-center rounded-ui-sm bg-brand px-4 text-button font-bold text-on-brand">
           {ko.admin.header.newItem}

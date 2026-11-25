@@ -278,7 +278,11 @@ function DrawerField({ label, children }: { label: string; children: React.React
 function EmptyState({ searching }: { searching: boolean }) {
   return (
     <section className="flex flex-col items-center gap-3 rounded-ui-md border border-line bg-surface px-4 py-10 text-center">
-      <Image src={searching ? "/brand/mascot-curious.png" : "/brand/mascot-happy.png"} alt="" width={130} height={100} className="h-[100px] w-[130px] object-contain" />
+      {searching ? (
+        <Image src="/brand/mascot-curious.png" alt="" width={130} height={100} className="h-[100px] w-[130px] object-contain" />
+      ) : (
+        <Image src="/brand/mascot-sleeping.png" alt="" width={150} height={94} className="h-[94px] w-[150px] object-contain" />
+      )}
       <p className="text-body leading-[1.5] font-bold text-ink">{searching ? t.noResult : t.empty}</p>
       {searching ? (
         <Link href="/admin/reports/new" className="flex h-11 items-center rounded-ui-sm bg-brand px-4 text-button font-bold text-on-brand">
