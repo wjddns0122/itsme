@@ -1,6 +1,7 @@
 import "server-only";
 import { getAi } from "@/lib/ai/client";
 import { normalizeReport } from "@/lib/ai/normalize";
+import { notifyNewCandidates } from "@/lib/notify/notify";
 import type { Json } from "@/lib/supabase/types";
 import { reportMatchFields } from "./report-fields";
 import { defaultMatchDeps, matchForItem, matchForReport, type MatchDeps } from "./run";
@@ -33,6 +34,7 @@ export async function processReport(reportId: string, deps: MatchDeps = defaultM
     }
     const result = await matchForReport(report.id, deps);
     console.info(JSON.stringify({ event: "match_report_done", status: result.status, created: result.status === "ok" ? result.created : 0 }));
+    if (result.status === "ok" && result.plan.notify.length > 0) await notifyNewCandidates(result.plan.notify);
   } finally {
     if (finalStatus !== report.ai_status) {
       const { error: statusError } = await supabase.from("lost_reports").update({ ai_status: finalStatus }).eq("id", report.id);
@@ -45,6 +47,7 @@ export async function processReport(reportId: string, deps: MatchDeps = defaultM
 export async function processItem(itemId: string, deps: MatchDeps = defaultMatchDeps()): Promise<void> {
   const result = await matchForItem(itemId, deps);
   console.info(JSON.stringify({ event: "match_item_done", status: result.status, created: result.status === "ok" ? result.created : 0 }));
+  if (result.status === "ok" && result.plan.notify.length > 0) await notifyNewCandidates(result.plan.notify);
 }
 
 async function normalize(report: { description: string; secret_detail: string | null; user_category: string | null }) {

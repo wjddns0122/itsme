@@ -9,6 +9,7 @@ import { getAdminContext } from "@/lib/auth/admin";
 import { seoulToday } from "@/lib/dates";
 import { FacilitySlugSchema } from "@/lib/facilities/page-data";
 import { processReport } from "@/lib/matching/process";
+import { notifyReportReceived } from "@/lib/notify/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeEmail, toContactKey } from "@/lib/validation/contact";
@@ -88,7 +89,10 @@ export async function createLostReport(slug: string, _prev: CreateReportState, f
   if (eventError) console.error(JSON.stringify({ event: "report_event_failed", code: eventError.code }));
 
   // Normalization and matching run after the response; P-04 shows "찾는 중" and refreshes meanwhile.
-  after(() => processReport(report.id));
+  after(async () => {
+    await notifyReportReceived(report.id);
+    await processReport(report.id);
+  });
   redirect(`/r/${accessToken}?new=1`);
 }
 
@@ -180,7 +184,10 @@ export async function createReportByAdmin(input: unknown): Promise<AdminReportRe
     .insert({ facility_id: facility.id, lost_report_id: report.id, actor: userId, type: "report_created", payload: { created_via: "admin" } });
   if (eventError) console.error(JSON.stringify({ event: "report_event_failed", code: eventError.code }));
 
-  after(() => processReport(report.id));
+  after(async () => {
+    await notifyReportReceived(report.id);
+    await processReport(report.id);
+  });
   return { ok: true, data: { path: `/r/${accessToken}` } };
 }
 

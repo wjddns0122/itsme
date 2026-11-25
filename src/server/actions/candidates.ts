@@ -1,6 +1,8 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { after } from "next/server";
+import { notifyApproved } from "@/lib/notify/notify";
 import { getAdminContext } from "@/lib/auth/admin";
 import { createClient } from "@/lib/supabase/server";
 import { MarkReturnedSchema, ReviewClaimSchema, returnMethodsFor, type MarkReturnedInput, type ReviewClaimInput } from "@/lib/validation/claim";
@@ -22,6 +24,7 @@ export async function reviewClaim(input: ReviewClaimInput): Promise<ActionResult
     console.error(JSON.stringify({ event: "review_claim_failed", action, code: error.code }));
     return { ok: false, error: error.code === "P0001" ? "conflict" : "internal" };
   }
+  if (action === "approve") after(() => notifyApproved(id));
   refresh();
   return { ok: true, data: { id } };
 }

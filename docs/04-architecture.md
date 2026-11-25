@@ -567,6 +567,8 @@ return { ok: true, data: { token: report.access_token } };
 - 신고 1건당 후보 알림은 24시간에 최대 3통 (`notified_at`으로 계산).
 - 같은 `contact_key`의 여러 신고가 같은 습득물과 매칭되면 알림은 1통만 보낸다.
 - 이메일 본문에는 공개 설명만 넣는다. 사진·비공개 특징·점수는 넣지 않는다.
+- 구현 (`lib/notify/`): Resend HTTP API를 `fetch`로 부른다 (SDK 없이). 환경변수 `RESEND_API_KEY`, `EMAIL_FROM`, 링크 주소는 `NEXT_PUBLIC_APP_URL`. 키가 없으면 보내지 않고 `email_skipped`만 남긴다. 로그에는 종류와 HTTP 상태만 남기고 주소·본문은 남기지 않는다.
+- 계기: `createLostReport`·`createReportByAdmin`의 `after()`(신고 접수), 매칭 결과 `plan.notify`(새 후보), `reviewClaim` 승인의 `after()`(수령 안내). 보낸 뒤 후보 `notified_at`과 이벤트 `notified`를 남긴다. 관리자용 새 확인 요청 메일(P1)은 아직 없다.
 
 ## 9. 보안과 개인정보
 
