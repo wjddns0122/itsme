@@ -10,6 +10,7 @@ import { getAdminContext } from "@/lib/auth/admin";
 import { CONTACT_CLAIM_WARNING, getClaimDetail, type ClaimDetail } from "@/lib/claims/admin";
 import { formatWait } from "@/lib/claims/wait";
 import { cn } from "@/lib/utils";
+import { OwnershipVerdictSchema, type OwnershipVerdict } from "@/lib/validation/ai";
 import ko from "../../../../../../messages/ko.json";
 
 const t = ko.admin.claims;
@@ -61,7 +62,7 @@ async function Detail({ params }: Pick<PageProps<"/admin/claims/[id]">, "params"
 
       <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
         <Said detail={c} />
-        <AiColumn />
+        <AiColumn verdict={OwnershipVerdictSchema.safeParse(c.aiVerdict).data ?? null} running={c.status === "claimed" && !c.aiVerdict && isRecent(c.claimedAt)} />
         <Stored detail={c} />
       </div>
 
@@ -104,15 +105,47 @@ function Said({ detail: c }: { detail: ClaimDetail }) {
   );
 }
 
-/** AI 답변 비교 is FL-044 (✂️). Until then the column says so and the admin compares directly. */
-function AiColumn() {
+const VERDICT_TONE = { match: "border-ok text-ok", mismatch: "border-danger text-danger", unknown: "border-line-strong text-ink" } as const;
+/** ai_verdict is written in after(); for a couple of minutes a missing result means it is still running. */
+const AI_PENDING_MS = 2 * 60_000;
+
+function isRecent(iso: string | null): boolean {
+  return iso !== null && Date.now() - new Date(iso).getTime() < AI_PENDING_MS;
+}
+
+/** §9 AI 비교 (참고용, Figma 29:4924). It never decides; without a result the admin compares directly. */
+function AiColumn({ verdict, running }: { verdict: OwnershipVerdict | null; running: boolean }) {
   return (
     <section className="flex flex-col gap-3 rounded-ui-md border-[1.5px] border-dashed border-line-strong p-4">
       <h2 className="flex items-center gap-2 text-section font-bold tracking-[-0.01em] text-ink">
         {t.ai}
         <span className="rounded-[6px] bg-neutral-bg px-1.5 text-caption font-bold text-neutral-ink">{t.aiTag}</span>
+        {verdict?.insufficient ? <span className="rounded-[6px] bg-warn-bg px-1.5 text-caption font-bold text-butter-ink">{t.insufficient}</span> : null}
       </h2>
-      <p className="text-desc text-ink">{t.aiNone}</p>
+      {verdict ? (
+        <>
+          <ul className="flex flex-col">
+            {verdict.items.map((i) => (
+              <li key={i.key} className="flex flex-col gap-1 border-b border-line py-2.5 first:pt-0">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-label font-bold text-ink">{t.verdictKeys[i.key]}</span>
+                  <span className={cn("flex items-center gap-1 rounded-ui-pill border bg-surface px-2 py-0.5 text-caption font-bold", VERDICT_TONE[i.result])}>
+                    {i.result === "match" ? <span aria-hidden>✓</span> : null}
+                    {t.verdictResults[i.result]}
+                  </span>
+                </span>
+                {i.note ? <span className="text-caption font-medium text-ink-muted">{i.note}</span> : null}
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col gap-1">
+            <span className="text-caption font-bold text-ink-muted">{t.opinion}</span>
+            <p className="text-body text-ink">{verdict.summary}</p>
+          </div>
+        </>
+      ) : (
+        <p role="status" className="text-desc text-ink">{running ? t.aiRunning : t.aiNone}</p>
+      )}
       <p className="text-caption font-medium text-ink-muted">{t.aiNotice}</p>
     </section>
   );

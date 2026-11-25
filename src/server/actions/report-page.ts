@@ -14,6 +14,7 @@ import { MAX_PHOTO_BYTES } from "@/lib/validation/item";
 import { ReportUpdateSchema, type ReportUpdateInput } from "@/lib/validation/report";
 import { after } from "next/server";
 import { processReport } from "@/lib/matching/process";
+import { runOwnershipCheck } from "@/lib/claims/verify-run";
 import ko from "../../../messages/ko.json";
 import type { ActionResult } from "./result";
 
@@ -102,6 +103,7 @@ export async function submitClaim(token: string, candidateId: string, _prev: Cla
     }
     return { ok: false, error: result === "not_found" ? "not_found" : (result as ClaimBlock) };
   }
+  after(() => runOwnershipCheck(candidateId));
   redirect(`/r/${token}`);
 }
 
@@ -137,6 +139,7 @@ export async function submitProof(token: string, candidateId: string, _prev: Pro
     if (error) console.error(JSON.stringify({ event: "submit_proof_failed", code: error.code }));
     return { ok: false, error: error ? "internal" : "not_available" };
   }
+  after(() => runOwnershipCheck(candidateId));
   refresh();
   return null;
 }

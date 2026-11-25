@@ -596,7 +596,22 @@
       },
       "approved": "승인했어요. 분실자가 오면 [반환 처리]로 마무리해 주세요.",
       "toItem": "습득물로 가서 반환 처리",
-      "notFound": "확인 요청을 찾을 수 없어요."
+      "notFound": "확인 요청을 찾을 수 없어요.",
+      "verdictKeys": {
+        "appearance": "겉모습 특징",
+        "marks": "개인 표시",
+        "contents": "내용물",
+        "place_time": "분실 장소·시간",
+        "serial": "일련번호"
+      },
+      "verdictResults": {
+        "match": "일치",
+        "mismatch": "불일치",
+        "unknown": "확인 안 됨"
+      },
+      "insufficient": "판단 근거 부족",
+      "opinion": "한 줄 의견",
+      "aiRunning": "답변을 비교하고 있어요. 잠시 후 새로고침해 주세요."
     },
     "return": {
       "title": "반환 처리",

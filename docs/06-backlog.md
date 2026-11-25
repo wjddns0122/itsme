@@ -377,14 +377,14 @@ docs/06-backlog.md 의 {티켓 ID} 를 구현해줘.
   - [x] 확인 대화상자(메모 선택), 상태 변경, 관련 후보 `dismissed`, 이벤트 — DB 함수 `set_found_item_status` 한 트랜잭션
 - 참고: `04-architecture.md` §6-1 `setFoundItemStatus`
 
-### FL-044 · AI 답변 비교 (소유권 확인 보조) ✂️
+### FL-044 · AI 답변 비교 (소유권 확인 보조) ✂️ → 🟡 코드 완료, 실제 응답 확인 남음 (테스트 때 Gemini 503)
 - P0 · 2h · 의존 FL-040, FL-005
 - 범위: `src/lib/ai/verify.ts`, `src/lib/validation/ai.ts`(`OwnershipVerdict`), `submitClaim`의 `after()`
 - 수용 기준
-  - [ ] `05-ai-matching.md` §9-2 입력·출력, §9-3 프롬프트. 연락처가 입력에 없다는 테스트
-  - [ ] 결과를 `ai_verdict`에 저장, 실패하면 null (관리자가 직접 비교)
-  - [ ] `getReportView`와 이메일에 `ai_verdict`가 없다 (테스트)
-  - [ ] 평가셋의 진짜 주인·가짜 요청으로 §9-5 지표 산출 (FL-081에 포함)
+  - [x] `05-ai-matching.md` §9-2 입력·출력, §9-3 프롬프트. 연락처가 입력에 없다는 테스트 (`verify.test.ts`: 입력에 연락처 컬럼이 없고 글 속 번호도 가림)
+  - [x] 결과를 `ai_verdict`에 저장, 실패하면 null (관리자가 직접 비교) — A-06 가운데 칸에 항목별 배지·한 줄 의견·판단 근거 부족
+  - [x] `getReportView`와 이메일에 `ai_verdict`가 없다 (테스트: `view.test.ts`, 이메일 템플릿은 공개 정보만 받음)
+  - [ ] 평가셋의 진짜 주인·가짜 요청으로 §9-5 지표 산출 — 평가 데이터(FL-080)가 모이면 `eval/`에 추가
 - 참고: `05-ai-matching.md` §9
 
 ### FL-045 · 추가 증빙 요청과 보류 ✅
