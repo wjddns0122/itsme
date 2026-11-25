@@ -603,6 +603,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      review_claim: {
+        Args: {
+          p_action: string
+          p_candidate_id: string
+          p_message?: string
+          p_note?: string
+        }
+        Returns: undefined
+      }
       search_facilities: {
         Args: {
           p_limit?: number
@@ -666,6 +675,24 @@ export type Database = {
           p_status: Database["public"]["Enums"]["found_status"]
         }
         Returns: undefined
+      }
+      submit_claim: {
+        Args: {
+          p_answers: Json
+          p_candidate_id: string
+          p_photo_path: string
+          p_report_id: string
+        }
+        Returns: string
+      }
+      submit_proof: {
+        Args: {
+          p_candidate_id: string
+          p_photo_path: string
+          p_reply: string
+          p_report_id: string
+        }
+        Returns: string
       }
     }
     Enums: {

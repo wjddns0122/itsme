@@ -66,6 +66,8 @@ export type PublicCandidate = {
   infoLow: boolean;
   item: {
     category: string;
+    /** Category code, for the icon only (the code is public: the label is shown anyway). */
+    categoryCode: string;
     /** Null for sensitive items: people only see the category (§9-2). */
     summary: string | null;
     foundDate: string | null;
@@ -117,6 +119,7 @@ export function toPublicCandidate(row: CandidateRow): PublicCandidate | null {
     infoLow: row.coverage < DEFAULT_MATCH_CONFIG.coverageMinNotify,
     item: {
       category: categoryLabel(row.item.category),
+      categoryCode: row.item.category,
       summary: sensitive ? null : row.item.public_summary,
       foundDate: sensitive ? null : foundDay(row.item.found_at),
       foundArea: sensitive ? null : row.item.found_area,

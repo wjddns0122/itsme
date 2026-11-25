@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { Icon, type IconName } from "@/components/icon";
+import { Icon } from "@/components/icon";
+import { categoryIcon } from "@/components/public/category-icon";
+import { ProofForm } from "@/components/public/claim/claim-form";
 import { FacilityLoading } from "@/components/public/facility-states";
 import { PublicShell } from "@/components/public/public-shell";
 import { AutoRefresh, CancelReport, CandidateActions, CopyLinkButton } from "@/components/public/status/report-actions";
@@ -70,7 +72,7 @@ async function ReportStatus({ params, searchParams }: Pick<PageProps<"/r/[token]
       {phase === "empty" ? <StateNote image="/brand/mascot-curious.png" text={t.empty} /> : null}
       {phase === "closed" ? <StateNote image="/brand/mascot-curious.png" text={t.cancelled} /> : null}
       {phase === "approved" ? <Approved view={view} /> : null}
-      {phase === "claimed" || phase === "needs_proof" ? <ClaimInProgress view={view} phase={phase} /> : null}
+      {phase === "claimed" || phase === "needs_proof" ? <ClaimInProgress view={view} phase={phase} token={token} /> : null}
       {phase === "candidates" ? <CandidateList view={view} token={token} /> : null}
 
       {phase !== "closed" && phase !== "approved" ? (
@@ -109,7 +111,10 @@ function ReportSummary({ view }: { view: ReportView }) {
     <section className="flex flex-col gap-1 rounded-ui-md border border-line bg-surface px-3.5 py-3">
       <div className="flex items-center gap-2">
         <p className="min-w-0 flex-1 truncate text-body leading-[1.5] font-bold text-ink">{title}</p>
-        <span className="shrink-0 rounded-ui-pill bg-blush px-[9px] py-0.5 text-caption font-bold text-blush-ink">{t.reportStatus[report.status]}</span>
+        <span className="shrink-0 rounded-ui-pill bg-blush px-[9px] py-0.5 text-caption font-bold text-blush-ink">
+          {/* Figma 32:218: while the facility waits for proof the badge says so. */}
+          {view.candidates.some((c) => c.status === "needs_proof") ? ko.candidateStatus.needs_proof : t.reportStatus[report.status]}
+        </span>
       </div>
       <p className="text-caption font-medium text-ink-muted">{meta}</p>
     </section>
@@ -146,10 +151,6 @@ function CandidateList({ view, token }: { view: ReportView; token: string }) {
   );
 }
 
-// Figma draws the goggles icon only; other categories use the generic package icon for now.
-function categoryIcon(categoryLabel: string): IconName {
-  return categoryLabel === "고글" ? "category-goggles" : "package";
-}
 
 function CandidateCard({ candidate, children }: { candidate: PublicCandidate; children?: ReactNode }) {
   const { item } = candidate;
@@ -158,7 +159,7 @@ function CandidateCard({ candidate, children }: { candidate: PublicCandidate; ch
     <article className="flex flex-col gap-2.5 rounded-ui-md border border-line bg-surface p-3.5">
       <div className="flex items-start gap-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-ui-sm bg-blush">
-          <Icon name={categoryIcon(item.category)} size={24} />
+          <Icon name={categoryIcon(item.categoryCode)} size={24} />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <p className="text-body leading-[1.5] font-bold text-ink">{item.summary ?? item.category}</p>
@@ -178,19 +179,29 @@ function CandidateCard({ candidate, children }: { candidate: PublicCandidate; ch
   );
 }
 
-function ClaimInProgress({ view, phase }: { view: ReportView; phase: "claimed" | "needs_proof" }) {
+function ClaimInProgress({ view, phase, token }: { view: ReportView; phase: "claimed" | "needs_proof"; token: string }) {
   const active = view.candidates.find((c) => c.status === phase);
+  if (phase === "claimed") {
+    return (
+      <section className="flex flex-col gap-3.5">
+        {active ? <CandidateCard candidate={active} /> : null}
+        <StateNote image="/brand/mascot-laptop.png" text={t.claimPending} />
+      </section>
+    );
+  }
   return (
     <section className="flex flex-col gap-3.5">
-      {active ? <CandidateCard candidate={active} /> : null}
-      {phase === "claimed" ? (
-        <StateNote image="/brand/mascot-laptop.png" text={t.claimPending} />
-      ) : (
-        <div className="flex flex-col gap-2 rounded-ui-md border-[1.5px] border-brand bg-surface p-3.5">
-          <p className="text-body leading-[1.5] font-bold text-ink">{t.needsProof}</p>
-          {active?.proofRequest ? <p className="text-body text-ink">{active.proofRequest}</p> : null}
+      <div className="flex items-end gap-2">
+        <h2 className="min-w-0 flex-1 text-question leading-[1.3] font-bold tracking-[-0.02em] text-ink">{t.needsProof}</h2>
+        <Image src="/brand/mascot-curious.png" alt="" width={80} height={61} className="h-[61px] w-20 object-contain" />
+      </div>
+      {active?.proofRequest ? (
+        <div className="flex flex-col gap-1 rounded-ui-sm bg-butter px-3.5 py-3">
+          <p className="text-caption font-bold text-butter-ink">{t.proofRequestLabel}</p>
+          <p className="text-body leading-[1.5] font-bold whitespace-pre-line text-ink">{active.proofRequest}</p>
         </div>
-      )}
+      ) : null}
+      {active ? <ProofForm token={token} candidateId={active.id} /> : null}
     </section>
   );
 }

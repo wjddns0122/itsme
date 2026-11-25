@@ -65,7 +65,7 @@ describe("toReportView: §9-2 허용 필드만", () => {
 
   it("민감 물품은 분류만 보여준다", () => {
     const view = toReportView(report, facility, [candidate({ item: { ...item, category: "wallet_card.card", is_sensitive: true } })]);
-    expect(view.candidates[0].item).toEqual({ category: "카드·교통카드", summary: null, foundDate: null, foundArea: null });
+    expect(view.candidates[0].item).toEqual({ category: "카드·교통카드", categoryCode: "wallet_card.card", summary: null, foundDate: null, foundArea: null });
   });
 
   it("수령 안내는 승인됐을 때만, 추가 증빙 요청은 요청 상태일 때만", () => {

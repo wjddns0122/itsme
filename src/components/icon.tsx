@@ -5,7 +5,9 @@ import { cn } from "@/lib/utils";
 // so states use separate files (e.g. "package" and "package-active").
 export type IconName =
   | "alert-circle"
+  | "category-earphones"
   | "category-goggles"
+  | "category-phone"
   | "check"
   | "chevron-down"
   | "chevron-right"
@@ -21,6 +23,7 @@ export type IconName =
   | "file-text-active"
   | "image"
   | "lock"
+  | "lock-info"
   | "log-out"
   | "package"
   | "package-active"
